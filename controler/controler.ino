@@ -1,3 +1,4 @@
+#include <SimpleDHT.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
@@ -6,10 +7,17 @@
 #include <ArduinoOTA.h>
 #include "config.h"
 
+SimpleDHT22 dht22;
+
 int i = 0;
 String controler_status;
 String line;
 unsigned long current_time;
+float heating = 0;
+float temperature = 0.0;
+float humidity = 0.0;
+float internal_temp_correction = 3.0;
+int err = SimpleDHTErrSuccess;
 
 WiFiClient client;
 ESP8266WebServer controler_server(80);
@@ -56,8 +64,7 @@ void getinfos (){
       // connect to thermometer
       if (!client.connect(thermometer, 80)) {
         Serial.println("Connection to thermometer failed");
-        relayOn();
-        controler_status = "no server, no thermometer, relay on.";
+        readinternalthermometer();
       } else {
         readthermometer();
       }
@@ -65,6 +72,45 @@ void getinfos (){
       readserver();
     }
     Serial.println("Connection closed.");
+  }
+}
+
+String readinternaltempString(){
+  err = dht22.read2(pinDHT22, &temperature, &humidity, NULL);
+  if ( err != SimpleDHTErrSuccess) {
+    return("nan");
+  } else {
+    return(String((float) temperature));
+  }
+}
+
+void readinternalthermometer(){
+  err = dht22.read2(pinDHT22, &temperature, &humidity, NULL);
+  if ( err != SimpleDHTErrSuccess) {
+    Serial.println("no internal reading.");
+    relayOff();
+    controler_status = "no server, no thermometer, internal: nan, relay off.";
+  } else {
+    if (temperature < default_temp + internal_temp_correction + heating) {
+      Serial.println("too cold.");
+      relayOn();
+      heating = 1.0;
+      controler_status = "no server, no thermometer, internal: " +
+        String((float) temperature) + 
+        " < " +
+        String((float) default_temp + internal_temp_correction) +
+        " (temperature corrected), relay on.";
+    }
+    if (temperature >= default_temp + internal_temp_correction + heating) {
+      Serial.println("too hot.");
+      relayOff();
+      heating = 0.0;
+      controler_status = "no server, no thermometer, internal: " +
+        String((float) temperature) + 
+        " >= " +
+        String((float) default_temp + internal_temp_correction) +
+        " (temperature corrected), relay off.";
+    }
   }
 }
 
@@ -82,27 +128,33 @@ void readthermometer(){
     if (i == 7) {
       Serial.println(line);
       if (line.equals("nan")) {
-        Serial.println("no reading.");
-        relayOn();
-        controler_status = "no server, thermometer temp : nan, relay on.";
+        Serial.println("no thermometer reading.");
+        relayOff();
+        controler_status = "no server, thermometer temp : nan, relay off.";
       } else {
-        if (line.toFloat() < default_temp) {
+        if (line.toFloat() < default_temp + heating) {
           Serial.println("too cold.");
           relayOn();
+          heating = 1.0;
           controler_status = "no server, thermometer temp :" +
             line + 
             " < " +
             String((float) default_temp) +
-            ", relay on.";
+            ", internal: " +
+            readinternaltempString() + 
+            " relay on.";
         }
-        if (line.toFloat() >= default_temp) {
+        if (line.toFloat() >= default_temp + heating) {
           Serial.println("too hot.");
           relayOff();
+          heating = 0.0;
           controler_status = "no server, thermometer temp :" +
             line + 
             " >= " +
             String((float) default_temp) +
-            ", relay off.";
+            ", internal: " +
+            readinternaltempString() + 
+            " relay off.";
         }
       }
     }
