@@ -26,17 +26,7 @@ void setup(void){
   Serial.begin(115200);
   controler_status = "controler started";
   // wifi connection
-  WiFi.begin(ssid, password);
-  Serial.println("");
-  // wait for wifi connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  // print ip adress when connected
-  Serial.println("");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  wificonnect();
 
   ArduinoOTA.setHostname("controler");
   ArduinoOTA.setPassword(OTApassword);
@@ -51,9 +41,28 @@ void setup(void){
 }
 
 void loop(void){
+  wificonnect()
   controler_server.handleClient();
   ArduinoOTA.handle();
   getinfos();
+}
+
+void wificonnect(){
+  if (WiFi.status() != WL_CONNECTED)) {
+    WiFi.begin(ssid, password);
+    Serial.println("");
+    // wait for wifi connection during 10sec
+    int wifi_wait = 0;
+    while (WiFi.status() != WL_CONNECTED || wifi_wait < 10000) {
+      delay(500);
+      Serial.print(".");
+      wifi_wait = wifi_wait + 500;
+    }
+    // print ip adress when connected
+    Serial.println("");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  }
 }
 
 void getinfos (){

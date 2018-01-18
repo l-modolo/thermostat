@@ -17,17 +17,7 @@ int err = SimpleDHTErrSuccess;
 void setup(void){
   Serial.begin(115200);
   // wifi connection
-  WiFi.begin(ssid, password);
-  Serial.println("");
-  // wait for wifi connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  // print ip adress when connected
-  Serial.println("");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  wificonnect();
 
   ArduinoOTA.setHostname("thermometer");
   ArduinoOTA.setPassword(OTApassword);
@@ -64,12 +54,31 @@ void setup(void){
   Serial.println("HTTP server started");
 }
 
+void loop(void){
+  wificonnect();
+  server.handleClient();
+  ArduinoOTA.handle();
+}
+
+void wificonnect(){
+  if (WiFi.status() != WL_CONNECTED)) {
+    WiFi.begin(ssid, password);
+    Serial.println("");
+    // wait for wifi connection during 10sec
+    int wifi_wait = 0;
+    while (WiFi.status() != WL_CONNECTED || wifi_wait < 10000) {
+      delay(500);
+      Serial.print(".");
+      wifi_wait = wifi_wait + 500;
+    }
+    // print ip adress when connected
+    Serial.println("");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  }
+}
+
 void handle_root() {
   server.send(200, "text/plain", "All systems go. Read data from /temp or or /temp_c or /humidity or /heatindex.");
   delay(100);
-}
-
-void loop(void){
-  server.handleClient();
-  ArduinoOTA.handle();
 }
