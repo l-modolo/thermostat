@@ -61,7 +61,7 @@ void loop(void){
 }
 
 void wificonnect(){
-  if (WiFi.status() != WL_CONNECTED)) {
+  if (WiFi.status() != WL_CONNECTED) {
     WiFi.begin(ssid, password);
     Serial.println("");
     // wait for wifi connection during 10sec

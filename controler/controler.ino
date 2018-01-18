@@ -41,14 +41,14 @@ void setup(void){
 }
 
 void loop(void){
-  wificonnect()
+  wificonnect();
   controler_server.handleClient();
   ArduinoOTA.handle();
   getinfos();
 }
 
 void wificonnect(){
-  if (WiFi.status() != WL_CONNECTED)) {
+  if (WiFi.status() != WL_CONNECTED) {
     WiFi.begin(ssid, password);
     Serial.println("");
     // wait for wifi connection during 10sec
