@@ -16,7 +16,6 @@ unsigned long current_time;
 float heating = 0;
 float temperature = 0.0;
 float humidity = 0.0;
-float internal_temp_correction = 3.0;
 int err = SimpleDHTErrSuccess;
 
 WiFiClient client;
@@ -103,7 +102,7 @@ void readinternalthermometer(){
     if (temperature < default_temp + internal_temp_correction + heating) {
       Serial.println("too cold.");
       relayOn();
-      heating = 1.0;
+      heating = temp_lag;
       controler_status = "no server, no thermometer, internal: " +
         String((float) temperature) + 
         " < " +
@@ -144,7 +143,7 @@ void readthermometer(){
         if (line.toFloat() < default_temp + heating) {
           Serial.println("too cold.");
           relayOn();
-          heating = 1.0;
+          heating = temp_lag;
           controler_status = "no server, thermometer temp :" +
             line + 
             " < " +
