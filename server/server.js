@@ -17,6 +17,8 @@ const external_url = 'http://api.openweathermap.org/data/2.5/forecast?id=' +
   '&units=metric';
 const temperature_base = 18.00;
 const temperature_max = 22.00;
+const heat_lag = 1.50;
+var heat_status_lag = 0.0;
 
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////// get temperature from agenda ////////////////////////
@@ -30,7 +32,7 @@ function match_date(line, re) {
   return new Date(year, month, day, hour, min, 0, 0);
 }
 
-function get_temp(current_line) {
+function get_temp(current_line, re_temp) {
   var temp_found = current_line.replace(re_temp, '$1');
   if (temp_found > temperature_max){
     temp_found = temperature_max;
@@ -44,6 +46,7 @@ function get_temp(current_line) {
     .on('error', function(err) {
       console.log(err);
     });
+  return(temp_found);
 }
 
 function default_temp() {
@@ -56,6 +59,7 @@ function default_temp() {
     .on('error', function(err) {
       console.log(err);
     });
+  return(temperature_base);
 }
 
 function parse_ics(ics_file) {
@@ -69,54 +73,102 @@ function parse_ics(ics_file) {
   var rl = Readline.createInterface({
     input: ics_file
   });
-  rl.on('line', function (line) {
-    if (line.match(re_start)) {
-      date_start = match_date( line, re_start );
-    }
-    if (line.match(re_stop)) {
-      date_stop = match_date( line, re_stop );
-    }
-    if (line.match(re_temp)) {
-      if (date_start.getTime() <= date_now.getTime() && date_now.getTime() <= date_stop.getTime()) {
-        get_temp(current_line);
-        temp_found = true;
-        rl.close();
+  return new Promise(function (fulfill, reject){
+    rl.on('line', function (line) {
+      if (line.match(re_start)) {
+        date_start = match_date( line, re_start );
       }
-      date_start = 0;
-      date_stop = 0;
-    }
-  });
-  rl.on('close', function() {
-    if (!temp_found) {
-      default_temp();
-    }
+      if (line.match(re_stop)) {
+        date_stop = match_date( line, re_stop );
+      }
+      if (line.match(re_temp)) {
+        if (date_start.getTime() <= date_now.getTime() && date_now.getTime() <= date_stop.getTime()) {
+          fulfill(get_temp(line, re_temp));
+          temp_found = true;
+          rl.close();
+        }
+        date_start = 0;
+        date_stop = 0;
+      }
+    });
+    rl.on('close', function() {
+      if (!temp_found) {
+        fulfill(default_temp());
+      }
+    });
   });
 }
 
-Request(agenda_url)
-  .then(function (body) {
-    var ics_file = Fs.createWriteStream('thermostat.ics');
-    ics_file.once('open', function(fd) {
-      ics_file.write(body);
-      ics_file.end();
+function write_temp() {
+  return new  Promise(function (fulfill, reject){
+    Request(agenda_url)
+    .then(function (body) {
+      var ics_file = Fs.createWriteStream('thermostat.ics');
+      ics_file.once('open', function(fd) {
+        ics_file.write(body);
+        ics_file.end();
+      });
+    })
+    .then(function (body) {
+      return(Fs.createReadStream('thermostat.ics'));
+    })
+    .then(function (ics_file) {
+      fulfill(parse_ics(ics_file));
+    })
+    .catch(function (err) {
+      reject(err);
     });
-    console.log("dl done");
-  })
-  .then(function (body) {
-    console.log("read dl");
-    return(Fs.createReadStream('thermostat.ics'));
-  })
-  .then(function (ics_file) {
-    console.log("parse dl");
-    parse_ics(ics_file);
-  })
-  .catch(function (err) {
-    console.log("error: " + err);
   });
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////// get temperature captor ///////////////////////////
 
+function get_temperature() {
+  return new Promise(function(fulfill, reject) {
+    Request(thermometer_url)
+    .then(function (body) {
+      fulfill(body);
+    })
+    .catch(function(err) {
+      reject(err);
+    });
+  });
+}
+
+function heat() {
+  return new Promise( function(fulfill, reject) {
+    write_temp().then( function(calendar_temp){
+      get_temperature().then( function(thermometer_temp){
+        var heat_status = "on";
+        if (thermometer_temp <= calendar_temp + heat_status_lag) {
+          heat_status = "on";
+          heat_status_lag = heat_lag;
+        }
+        if (thermometer_temp > calendar_temp + heat_status_lag) {
+          heat_status = "off";
+          heat_status_lag = 0.0;
+        }
+        fulfill( {heat:heat_status, calendar: calendar_temp, thermometer: thermometer_temp});
+      })
+      .catch( function(err) {
+        reject(err);
+      });
+    })
+    .catch( function(err) {
+      reject(err);
+    });
+  });
+}
+
+var app = Express();
+app.get('/', function(req, res) {
+  heat().then( function(heating) {
+    res.send(heating.heat);
+    console.log(heating);
+  });
+});
+app.listen(80, () => console.log('server started'));
 
 // .then({
 
