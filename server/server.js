@@ -37,7 +37,7 @@ function get_temp(current_line, re_temp) {
   if (temp_found > temperature_max){
     temp_found = temperature_max;
   }
-  var temp_file_found = Fs.createWriteStream('temperature.txt');
+  var temp_file_found = Fs.createWriteStream('readings/temperature.txt');
   temp_file_found
     .on('open', function(fd) {
       temp_file_found.write("" + temp_found + "");
@@ -50,7 +50,7 @@ function get_temp(current_line, re_temp) {
 }
 
 function default_temp() {
-  var temp_file = Fs.createWriteStream('temperature.txt');
+  var temp_file = Fs.createWriteStream('readings/temperature.txt');
   temp_file
     .on('open', function(fd) {
       temp_file.write("" + temperature_base + "");
@@ -71,7 +71,7 @@ function parse_ics(ics_file) {
   var date_now = new Date();
   var temp_found = false;
   var rl = Readline.createInterface({
-    input: ics_file
+    input: Fs.createReadStream('readings/thermostat.ics')
   });
   return new Promise(function (fulfill, reject){
     rl.on('line', function (line) {
@@ -103,17 +103,16 @@ function write_temp() {
   return new  Promise(function (fulfill, reject){
     Request(agenda_url)
     .then(function (body) {
-      var ics_file = Fs.createWriteStream('thermostat.ics');
-      ics_file.once('open', function(fd) {
+      var ics_file = Fs.createWriteStream('readings/thermostat.ics');
+      ics_file.on('open', function(fd) {
         ics_file.write(body);
-        ics_file.end();
+	ics_file.end();
+      });
+      ics_file.on('end', function(fd) {
       });
     })
     .then(function (body) {
-      return(Fs.createReadStream('thermostat.ics'));
-    })
-    .then(function (ics_file) {
-      fulfill(parse_ics(ics_file));
+      fulfill(parse_ics());
     })
     .catch(function (err) {
       reject(err);
@@ -128,7 +127,7 @@ function get_temperature() {
   return new Promise(function(fulfill, reject) {
     Request(thermometer_url)
     .then(function (body) {
-      fulfill(body);
+      fulfill(parseFloat(body));
     })
     .catch(function(err) {
       reject(err);
