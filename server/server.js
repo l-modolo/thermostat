@@ -132,6 +132,21 @@ function get_temperature() {
   });
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////// get weather temperature ///////////////////////////
+
+function get_weather_temperature() {
+  return new Promise(function(fulfill, reject) {
+    Request(weather_url)
+      .then(function (body) {
+        fulfill(parseFloat(JSON.parse(body).list[0].main.temp));
+      })
+      .catch(function (err){
+        reject(err);
+      });
+  });
+}
+
 function heat() {
   return new Promise( function(fulfill, reject) {
     write_temp().then( function(calendar_temp){
