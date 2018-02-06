@@ -184,11 +184,30 @@ function heat() {
 var app = Express();
 app.get('/', function(req, res) {
   heat().then( function(heating) {
-    res.send(heating.heat);
-    console.log(heating);
+    if (heating.heat == 1) {
+	    res.send("on");
+    } else {
+	    res.send("off");
+    }
+    console.log(
+	    heating.date + ", " +
+	    heating.heat + ", " +
+	    heating.calendar + ", " +
+	    heating.thermometer + ", " +
+	    heating.weather
+    );
+  }).catch( function(heating) {
+    res.send("off");
+    console.log(
+	    heating.date + ", " +
+	    heating.heat + ", " +
+	    heating.calendar + ", " +
+	    heating.thermometer + ", " +
+	    heating.weather
+    );
   });
 });
-app.listen(80, () => console.log('server started'));
+app.listen(80);
 
 // .then({
 
