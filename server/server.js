@@ -15,7 +15,7 @@ const external_url = 'http://api.openweathermap.org/data/2.5/forecast?id=' +
   '&APPID=' +
   api_id +
   '&units=metric';
-const temperature_base = 18.00;
+const temperature_base = 17.00;
 const temperature_max = 22.00;
 const heat_lag = 1.50;
 var heat_status_lag = 0.0;
