@@ -62,14 +62,14 @@ function default_temp() {
   return(temperature_base);
 }
 
-function parse_ics(ics_file) {
-  var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/;
-  var re_stop = /DTEND.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/;
+function parse_ics() {
+  var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+  var re_stop = /DTEND.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
   var re_temp = /SUMMARY:(.*)/;
   var date_start;
   var date_stop = 0;
   var date_now = new Date();
-  var temp_found = false;
+  var temp_found = default_temp();
   var rl = Readline.createInterface({
     input: Fs.createReadStream('readings/thermostat.ics')
   });
