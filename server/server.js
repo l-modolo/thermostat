@@ -83,8 +83,7 @@ function parse_ics() {
       }
       if (line.match(re_temp)) {
         if (date_start.getTime() <= date_now.getTime() && date_now.getTime() <= date_stop.getTime()) {
-          fulfill(get_temp(line, re_temp));
-          temp_found = true;
+          temp_found = get_temp(line, re_temp);
           rl.close();
         }
         date_start = 0;
@@ -92,9 +91,7 @@ function parse_ics() {
       }
     });
     rl.on('close', function() {
-      if (!temp_found) {
-        fulfill(default_temp());
-      }
+      fulfill(parseFloat(temp_found));
     });
   });
 }
