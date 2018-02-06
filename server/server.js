@@ -147,27 +147,36 @@ function get_weather_temperature() {
   });
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// set heating status //////////////////////////////
+
 function heat() {
+  var heat_status = 0;
   return new Promise( function(fulfill, reject) {
+    var date_now = new Date();
     write_temp().then( function(calendar_temp){
       get_temperature().then( function(thermometer_temp){
-        var heat_status = "on";
         if (thermometer_temp <= calendar_temp + heat_status_lag) {
-          heat_status = "on";
+          heat_status = 1;
           heat_status_lag = heat_lag;
         }
         if (thermometer_temp > calendar_temp + heat_status_lag) {
-          heat_status = "off";
+          heat_status = 0;
           heat_status_lag = 0.0;
         }
-        fulfill( {heat:heat_status, calendar: calendar_temp, thermometer: thermometer_temp});
+        get_weather_temperature().then( function(weather_temperature){
+          fulfill( {heat:heat_status, calendar: calendar_temp, thermometer: thermometer_temp, weather: weather_temperature, date: date_now.getTime()} );
+        })
+        .catch( function(err) {
+          reject( {heat:heat_status, calendar: calendar_temp, thermometer: err, weather: err, date: date_now.getTime()} );
+        });
       })
       .catch( function(err) {
-        reject(err);
+        reject( {heat:heat_status, calendar: calendar_temp, thermometer: err, weather:err, date: date_now.getTime()} );
       });
     })
     .catch( function(err) {
-      reject(err);
+      reject( {heat:heat_status, calendar: err, thermometer: err, weather: err, date: date_now.getTime()} );
     });
   });
 }
