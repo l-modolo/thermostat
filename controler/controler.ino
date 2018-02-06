@@ -178,16 +178,16 @@ void readserver(){
   delay(1000);
   // Read the entire response and flush it to Serial output
   while(client.available()){
-    String line = client.readStringUntil('\r');
+    String line = client.readStringUntil('\n');
     Serial.println(line);
     if (line.equals("on")) {
       Serial.println("Server says to be on.");
       relayOn();
-      controler_status = "server = on, relay on.";
+      controler_status = "server = on, relay on." + line;
     } else {
       Serial.println("Server says to be off.");
       relayOff();
-      controler_status = "server = off, relay off.";
+      controler_status = "server = off, relay off." + line;
     }
   }
 }
