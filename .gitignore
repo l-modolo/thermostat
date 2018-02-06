@@ -1,2 +1,5 @@
 controler/config.h
 thermometer/config.h
+server/node_modules
+server/readings
+server/db
