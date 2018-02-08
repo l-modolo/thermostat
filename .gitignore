@@ -1,5 +1,7 @@
 controler/config.h
 thermometer/config.h
 server/node_modules
+server/package-lock.json
+server/package.json
 server/readings
 server/db
