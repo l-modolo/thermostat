@@ -1,9 +1,7 @@
 const Express = require('express');
-const Pouchdb = require('pouchdb'); // https://pouchdb.com/api.html
 const Request = require('request-promise');
 const Bluebird = require('bluebird');
 const Fs = require('fs');
-const Readline = require('readline');
 
 
 const agenda_url = 'https://calendar.google.com/calendar/ical/.../basic.ics';
@@ -163,13 +161,6 @@ function get_calendar(){
 ///////////////////////////// get temperature captor ///////////////////////////
 
 function get_thermometer() {
-  return( new Promise(function(fulfill, reject){
-    fulfill({
-      temperature: 18.6,
-      humidity: 32.8,
-      heatindex: heatindex(18.6, 32.8)
-      });
-    }));
   return( Request(thermometer_url + "both")
     .then(function (body) {
       var res = JSON.parse(body);
