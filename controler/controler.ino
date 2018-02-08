@@ -179,7 +179,7 @@ void readthermometer(){
 
 void readserver(){
   Serial.println("Connected to server - sending request...");
-  client.print(String("GET /heater.html HTTP/1.1\r\n") +
+  client.print(String("GET / HTTP/1.1\r\n") +
                "Host: " + server + "\r\n" +
                "Connection: close\r\n\r\n");
   Serial.println("Request sent - waiting for reply...");
