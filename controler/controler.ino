@@ -194,7 +194,8 @@ void readserver(){
       controler_status = "server = on," +
             readinternaltempString() + 
             " relay on.";
-    } else {
+    }
+    if (line.equals("off")) {
       Serial.println("Server says to be off.");
       relayOff();
       controler_status = "server = off," +
