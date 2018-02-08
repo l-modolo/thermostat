@@ -18,6 +18,8 @@ const temperature_base = 17.00;
 const temperature_max = 22.00;
 const heat_lag = 1.50;
 var heat_status_lag = 0.0;
+var thermometer_back = {temperature: 20, humidity: 40, heatindex: 19};
+var weather_back = {temperature: 10, humidity: 80, heatindex: 8};
 
 
 function heatindex(temperature, humidity) {
@@ -164,19 +166,16 @@ function get_thermometer() {
   return( Request(thermometer_url + "both")
     .then(function (body) {
       var res = JSON.parse(body);
-      return({
+      thermometer_back = {
         temperature: parseFloat(res.temperature),
         humidity: parseFloat(res.humidity),
         heatindex: heatindex(res.temperature, res.humidity)
-      });
+      };
+      return(thermometer_back);
     })
     .catch(function (err){
       console.log("error: get_thermometer() " + err);
-      return({
-        temperature: err,
-        humidity: err,
-        heatindex: err
-      });
+      return(thermometer_back);
     })
   );
 }
@@ -188,19 +187,16 @@ function get_weather() {
   return( Request(weather_url)
     .then(function (body) {
       var res = JSON.parse(body).list[0].main;
-      return({
+      weather_back = {
         temperature: parseFloat(res.temp),
         humidity: parseFloat(res.humidity),
         heatindex: heatindex(res.temp, res.humidity)
-      });
+      }
+      return(weather_back);
     })
     .catch(function (err){
       console.log("error: get_weather() " + err);
-      return({
-        temperature: err,
-        humidity: err,
-        heatindex: err
-      });
+      return(weather_back);
     })
   );
 }
