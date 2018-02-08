@@ -1,16 +1,17 @@
 const Express = require('express');
 const Pouchdb = require('pouchdb'); // https://pouchdb.com/api.html
 const Request = require('request-promise');
+const Bluebird = require('bluebird');
 const Fs = require('fs');
 const Readline = require('readline');
 
 
 const agenda_url = 'https://calendar.google.com/calendar/ical/.../basic.ics';
-const controler_url = 'http://192.168.0.3/temp';
-const thermometer_url = 'http://192.168.0.4/temp';
+const controler_url = 'http://192.168.0.3/';
+const thermometer_url = 'http://192.168.0.4/';
 const city_id = '...';
 const api_id = '...';
-const external_url = 'http://api.openweathermap.org/data/2.5/forecast?id=' +
+const weather_url = 'http://api.openweathermap.org/data/2.5/forecast?id=' +
   city_id +
   '&APPID=' +
   api_id +
@@ -19,6 +20,27 @@ const temperature_base = 17.00;
 const temperature_max = 22.00;
 const heat_lag = 1.50;
 var heat_status_lag = 0.0;
+
+
+function heatindex(temperature, humidity) {
+  var T = temperature * 1.8000 + 32.0;
+  var RH = humidity;
+  var HI = -42.379 + 2.04901523*T + 10.14333127*RH - 0.22475541*T*RH - 0.00683783*T*T - 0.05481717*RH*RH + 0.00122874*T*T*RH + 0.00085282*T*RH*RH - 0.00000199*T*T*RH*RH;
+  if (RH < 13.0) {
+    if (80.0 < T && T < 120.0 ){
+      HI = HI - ((13.0-RH)/4.0) * Math.sqrt((17.0-Math.abs(T-95.0))/17.0);
+    }
+  }
+  if (RH > 85.0) {
+    if (80.0 < T && T < 87.0 ){
+      HI = HI + ((RH-85.0)/10.0) * ((87.0-T)/5.0);
+    }
+  }
+  if (HI < 80.0) {
+    HI = 0.5 * (T + 61.0 + ((T-68.0)*1.2) + (RH*0.094));
+  }
+  return (HI - 32.00) / 1.8000;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////// get temperature from agenda ////////////////////////
@@ -32,67 +54,40 @@ function match_date(line, re) {
   return new Date(year, month, day, hour, min, 0, 0);
 }
 
-function get_temp(current_line, re_temp) {
-  var temp_found = current_line.replace(re_temp, '$1');
-  if (temp_found > temperature_max){
-    temp_found = temperature_max;
-  }
-  var temp_file_found = Fs.createWriteStream('readings/temperature.txt');
-  temp_file_found
-    .on('open', function(fd) {
-      temp_file_found.write("" + temp_found + "");
-      temp_file_found.end();
-    })
-    .on('error', function(err) {
-      console.log(err);
-    });
-  return(temp_found);
-}
-
 function default_temp() {
-  var temp_file = Fs.createWriteStream('readings/temperature.txt');
-  temp_file
-    .on('open', function(fd) {
-      temp_file.write("" + temperature_base + "");
-      temp_file.end();
-    })
-    .on('error', function(err) {
-      console.log(err);
-    });
   return(temperature_base);
 }
 
-function parse_ics() {
-  var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-  var re_stop = /DTEND.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-  var re_temp = /SUMMARY:(.*)/;
-  var date_start;
-  var date_stop = 0;
-  var date_now = new Date();
-  var temp_found = default_temp();
-  var rl = Readline.createInterface({
-    input: Fs.createReadStream('readings/thermostat.ics')
-  });
+function parse_ics(body) {
   return new Promise(function (fulfill, reject){
-    rl.on('line', function (line) {
-      if (line.match(re_start)) {
-        date_start = match_date( line, re_start );
+    var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+    var re_stop = /DTEND.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+    var re_temp = /SUMMARY:(.*)/;
+    var date_start;
+    var date_stop = 0;
+    var date_now = new Date();
+    var temp_found = default_temp();
+    var lines = body.split('\n');
+    for(i = 0; i < lines.length; i++) {
+      if (lines[i].match(re_start)) {
+        date_start = match_date( lines[i], re_start );
       }
-      if (line.match(re_stop)) {
-        date_stop = match_date( line, re_stop );
+      if (lines[i].match(re_stop)) {
+        date_stop = match_date( lines[i], re_stop );
       }
-      if (line.match(re_temp)) {
-        if (date_start.getTime() <= date_now.getTime() && date_now.getTime() <= date_stop.getTime()) {
-          temp_found = get_temp(line, re_temp);
-          rl.close();
+      if (lines[i].match(re_temp)) {
+        if (date_start.getTime() <= date_now.getTime() &&
+            date_now.getTime() <= date_stop.getTime()) {
+          temp_found = lines[i].replace(re_temp, '$1');
+          if (temp_found > temperature_max){
+            temp_found = temperature_max;
+          }
         }
         date_start = 0;
         date_stop = 0;
       }
-    });
-    rl.on('close', function() {
-      fulfill(parseFloat(temp_found));
-    });
+    }
+    fulfill(parseFloat(temp_found));
   });
 }
 
@@ -117,34 +112,106 @@ function write_temp() {
   });
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///////////////////////////// get temperature captor ///////////////////////////
+function write_ics(body, file) {
+  return new Promise( function(fulfill, reject) {
+    Fs.writeFile(file, body, function(err) {
+      if (err) {
+        console.log("error in write_ics(): " + err);
+        reject(err);
+      }
+      fulfill("ics writen");
+    });
+  });
+}
 
-function get_temperature() {
-  return new Promise(function(fulfill, reject) {
-    Request(thermometer_url)
-    .then(function (body) {
-      fulfill(parseFloat(body));
-    })
-    .catch(function(err) {
-      reject(err);
+function read_ics(file) {
+  return new Promise( function(fulfill, reject) {
+    Fs.readFile(file, 'utf8', function(err, data) {
+      if (err) {
+        console.log("error in read_ics(): " + err);
+        reject(err);
+      }
+      fulfill(data);
+    });
+  });
+}
+
+function get_calendar(){
+  return Request(agenda_url)
+  .then( function(body) {
+    return Bluebird.all([
+      parse_ics(body),
+      write_ics(body, 'readings/thermostat.ics')
+    ])
+    .then( function (res) {
+      return res[0];
+    });
+  })
+  .catch( function(err) {
+    console.log("error in get_calendar(): " + err);
+    return read_ics('readings/thermostat.ics')
+    .then( function(body) {
+      return parse_ics(body)
+      .then( function (res) {
+        return res;
+      });
     });
   });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// get temperature captor ///////////////////////////
+
+function get_thermometer() {
+  return( new Promise(function(fulfill, reject){
+    fulfill({
+      temperature: 18.6,
+      humidity: 32.8,
+      heatindex: heatindex(18.6, 32.8)
+      });
+    }));
+  return( Request(thermometer_url + "both")
+    .then(function (body) {
+      var res = JSON.parse(body);
+      return({
+        temperature: parseFloat(res.temperature),
+        humidity: parseFloat(res.humidity),
+        heatindex: heatindex(res.temperature, res.humidity)
+      });
+    })
+    .catch(function (err){
+      console.log("error: get_thermometer() " + err);
+      return({
+        temperature: err,
+        humidity: err,
+        heatindex: err
+      });
+    })
+  );
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////////////////////// get weather temperature ///////////////////////////
 
-function get_weather_temperature() {
-  return new Promise(function(fulfill, reject) {
-    Request(weather_url)
-      .then(function (body) {
-        fulfill(parseFloat(JSON.parse(body).list[0].main.temp));
-      })
-      .catch(function (err){
-        reject(err);
+function get_weather() {
+  return( Request(weather_url)
+    .then(function (body) {
+      var res = JSON.parse(body).list[0].main;
+      return({
+        temperature: parseFloat(res.temp),
+        humidity: parseFloat(res.humidity),
+        heatindex: heatindex(res.temp, res.humidity)
       });
-  });
+    })
+    .catch(function (err){
+      console.log("error: get_weather() " + err);
+      return({
+        temperature: err,
+        humidity: err,
+        heatindex: err
+      });
+    })
+  );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -152,33 +219,64 @@ function get_weather_temperature() {
 
 function heat() {
   var heat_status = 0;
-  return new Promise( function(fulfill, reject) {
-    var date_now = new Date();
-    write_temp().then( function(calendar_temp){
-      get_temperature().then( function(thermometer_temp){
-        if (thermometer_temp <= calendar_temp + heat_status_lag) {
-          heat_status = 1;
-          heat_status_lag = heat_lag;
-        }
-        if (thermometer_temp > calendar_temp + heat_status_lag) {
-          heat_status = 0;
-          heat_status_lag = 0.0;
-        }
-        get_weather_temperature().then( function(weather_temperature){
-          fulfill( {heat:heat_status, calendar: calendar_temp, thermometer: thermometer_temp, weather: weather_temperature, date: date_now.getTime()} );
-        })
-        .catch( function(err) {
-          reject( {heat:heat_status, calendar: calendar_temp, thermometer: err, weather: err, date: date_now.getTime()} );
-        });
-      })
-      .catch( function(err) {
-        reject( {heat:heat_status, calendar: calendar_temp, thermometer: err, weather:err, date: date_now.getTime()} );
-      });
-    })
-    .catch( function(err) {
-      reject( {heat:heat_status, calendar: err, thermometer: err, weather: err, date: date_now.getTime()} );
-    });
+  var date_now = new Date();
+  return Bluebird.all([
+    get_calendar(),
+    get_thermometer(),
+    get_weather()
+  ])
+  .then( function ( temperatures ) {
+    calendar_temp = temperatures[0];
+    indoor = temperatures[1];
+    outdoor = temperatures[2];
+    if (indoor.temperature <= calendar_temp + heat_status_lag) {
+      heat_status = 1;
+      heat_status_lag = heat_lag;
+    }
+    if (indoor.temperature > calendar_temp + heat_status_lag) {
+      heat_status = 0;
+      heat_status_lag = 0.0;
+    }
+    return( {
+      heat: heat_status,
+      calendar: calendar_temp,
+      indoor_temperature: indoor.temperature,
+      indoor_humidity: indoor.humidity,
+      indoor_hi: indoor.heatindex,
+      outdoor_temperature: outdoor.temperature,
+      outdoor_humidity: outdoor.humidity,
+      outdoor_hi: outdoor.heatindex,
+      date: date_now.getTime()
+    } );
+  })
+  .catch( function(err) {
+    console.log("error heat(): " + err);
+    return( {
+      heat: heat_status,
+      calendar: err,
+      indoor_temperature: err,
+      indoor_humidity: err,
+      indoor_hi: err,
+      outdoor_temperature: err,
+      outdoor_humidity: err,
+      outdoor_hi: err,
+      date: date_now.getTime()
+    } );
   });
+}
+
+function heating2string(heating){
+  return(
+    heating.date + ", " +
+    heating.heat + ", " +
+    heating.calendar + ", " +
+    heating.indoor_temperature + ", " +
+    heating.indoor_humidity + ", " +
+    heating.indoor_hi + ", " +
+    heating.outdoor_temperature + ", " +
+    heating.outdoor_humidity + ", " +
+    heating.outdoor_hi
+  );
 }
 
 var app = Express();
@@ -189,25 +287,24 @@ app.get('/', function(req, res) {
     } else {
 	    res.send("off");
     }
-    console.log(
-	    heating.date + ", " +
-	    heating.heat + ", " +
-	    heating.calendar + ", " +
-	    heating.thermometer + ", " +
-	    heating.weather
-    );
+    console.log(heating2string(heating));
   }).catch( function(heating) {
     res.send("off");
-    console.log(
-	    heating.date + ", " +
-	    heating.heat + ", " +
-	    heating.calendar + ", " +
-	    heating.thermometer + ", " +
-	    heating.weather
-    );
+    console.log(heating2string(heating));
   });
 });
-app.listen(80);
+
+app.get('/thermostat', function(req, res) {
+  heat().then( function(heating) {
+    res.send(heating2string(heating));
+    console.log(heating2string(heating));
+  }).catch( function(heating) {
+    res.send(heating2string(heating));
+    console.log(heating2string(heating));
+  });
+});
+
+app.listen(8080);
 
 // .then({
 
