@@ -61,6 +61,26 @@ function heatindex(temperature, humidity) {
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////// get temperature from agenda ////////////////////////
 
+function default_temp() {
+  return(temperature_base);
+}
+
+function zero_date() {
+  return new Date(0, 0, 0, 0, 0, 0, 0);
+}
+
+function get_day(date) {
+  var weekday = new Array(7);
+  weekday[0] = "SU";
+  weekday[1] = "MO";
+  weekday[2] = "TU";
+  weekday[3] = "WE";
+  weekday[4] = "TH";
+  weekday[5] = "FR";
+  weekday[6] = "SA";
+  return(weekday[date.getDay()]);
+}
+
 function match_date(line, re) {
   var year = line.replace(re, '$1');
   var month = line.replace(re, '$2') - 1;
@@ -70,40 +90,99 @@ function match_date(line, re) {
   return new Date(year, month, day, hour, min, 0, 0);
 }
 
-function default_temp() {
-  return(temperature_base);
+function match_rep(line) {
+  var re_day = /RRULE:.*BYDAY=([A-Z]{2}).*/;
+  var re_until = /RRULE:.*UNTIL=(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+  var day = line.replace(re_day, '$1').slice(0, -1);
+  var until = zero_date();
+  if (line.match(re_until)) {
+    until = match_date(line, re_until);
+  }
+  return ({ day: day, until: until });
+}
+
+function update_date(date, date_now) {
+  return new Date(
+    date_now.getFullYear(),
+    date_now.getMonth(),
+    date_now.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    0, 0
+  )
+}
+
+function apply_rep(event, date_now){
+  // if no rep rule
+  if (event.rep === "") {
+    return event;
+  }
+  // if outdated rule
+  if (event.rep.until.getTime() != zero_date().getTime() &&
+      event.rep.until.getTime() < date_now.getTime()) {
+    return event;
+  }
+  if (event.rep.day == get_day(date_now)) {
+    event.start = update_date(event.start, date_now);
+    event.stop = update_date(event.stop, date_now);
+  }
+  return event;
+}
+
+function parse_ics_event(body, date_now) {
+  var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+  var re_stop = /DTEND.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+  var re_temp = /SUMMARY:(.*)/;
+  var re_rep = /RRULE:.*/;
+  var lines = body.split("\n");
+  event = {
+    start: zero_date(),
+    stop: zero_date(),
+    temp: default_temp(),
+    rep: ""
+  }
+  for(i = 0; i < lines.length; i++) {
+    if (lines[i].match(re_start)) {
+      event.start = match_date( lines[i], re_start );
+    }
+    if (lines[i].match(re_stop)) {
+      event.stop = match_date( lines[i], re_stop );
+    }
+    if (lines[i].match(re_temp)) {
+      event.temp = parseFloat(lines[i].replace(re_temp, '$1'));
+      if (event.temp > temperature_max){
+        event.temp = temperature_max;
+      }
+    }
+    if (lines[i].match(re_rep)) {
+      event.rep = match_rep(lines[i]);
+    }
+  }
+  event = apply_rep(event, date_now);
+  return event;
 }
 
 function parse_ics(body) {
   return new Promise(function (fulfill, reject){
     var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-    var re_stop = /DTEND.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-    var re_temp = /SUMMARY:(.*)/;
-    var date_start;
-    var date_stop = 0;
     var date_now = new Date();
     var temp_found = default_temp();
     var lines = body.split('\n');
+    var event_body = "";
+    var i = 0;
     for(i = 0; i < lines.length; i++) {
       if (lines[i].match(re_start)) {
-        date_start = match_date( lines[i], re_start );
-      }
-      if (lines[i].match(re_stop)) {
-        date_stop = match_date( lines[i], re_stop );
-      }
-      if (lines[i].match(re_temp)) {
-        if (date_start.getTime() <= date_now.getTime() &&
-            date_now.getTime() <= date_stop.getTime()) {
-          temp_found = lines[i].replace(re_temp, '$1');
-          if (temp_found > temperature_max){
-            temp_found = temperature_max;
-          }
+        var event = parse_ics_event(event_body, date_now);
+        if (event.start.getTime() <= date_now.getTime() &&
+            date_now.getTime() <= event.stop.getTime()) {
+          temp_found = event.temp;
         }
-        date_start = 0;
-        date_stop = 0;
+        event_body = lines[i] + "\n";
+      } else {
+        event_body = event_body + lines[i] + "\n";
       }
     }
-    fulfill(parseFloat(temp_found));
+    fulfill(temp_found);
   });
 }
 
@@ -291,7 +370,8 @@ app.get('/', function(req, res) {
 	    res.send("off");
     }
     console.log(heating2string(heating));
-  }).catch( function(heating) {
+  })
+  .catch( function(heating) {
     res.send("off");
     console.log(heating2string(heating));
   });
