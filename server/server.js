@@ -3,22 +3,38 @@ const Request = require('request-promise');
 const Bluebird = require('bluebird');
 const Fs = require('fs');
 
+function read_config() {
+  var data_conf = Fs.readFileSync('config.json', 'utf8', function(err, data) {
+    if (err) {
+      console.log("error in read_config(): " + err);
+      reject(err);
+    }
+    return(data);
+  });
+  data_conf = JSON.parse(data_conf)
+  return(data_conf);
+}
+var config = read_config();
 
-const agenda_url = 'https://calendar.google.com/calendar/ical/.../basic.ics';
-const controler_url = 'http://192.168.0.3/';
-const thermometer_url = 'http://192.168.0.4/';
-const city_id = '...';
-const api_id = '...';
+const agenda_url = config.agenda_url;
+const controler_url = config.controler_url;
+const thermometer_url = config.thermometer_url;
+const city_id = config.city_id;
+const api_id = config.api_id;
 const weather_url = 'http://api.openweathermap.org/data/2.5/forecast?id=' +
   city_id +
   '&APPID=' +
   api_id +
   '&units=metric';
-const temperature_base = 17.00;
-const temperature_max = 22.00;
-const heat_lag = 1.50;
+const temperature_base = config.temperature_base;
+const temperature_max = config.temperature_max;
+const heat_lag = config.heat_lag;
 var heat_status_lag = 0.0;
-var thermometer_back = {temperature: 20, humidity: 40, heatindex: 19};
+var thermometer_back = {
+  temperature: config.temperature_back,
+  humidity: 40,
+  heatindex: 19
+};
 var weather_back = {temperature: 10, humidity: 80, heatindex: 8};
 
 
