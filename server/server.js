@@ -4,7 +4,7 @@ const Bluebird = require('bluebird');
 const Fs = require('fs');
 
 function read_config() {
-  var data_conf = Fs.readFileSync('config.json', 'utf8', function(err, data) {
+  var data_conf = Fs.readFileSync(__dirname + '/config.json', 'utf8', function(err, data) {
     if (err) {
       console.log("error in read_config(): " + err);
       reject(err);
@@ -190,7 +190,7 @@ function write_temp() {
   return new  Promise(function (fulfill, reject){
     Request(agenda_url)
     .then(function (body) {
-      var ics_file = Fs.createWriteStream('readings/thermostat.ics');
+      var ics_file = Fs.createWriteStream(__dirname + '/readings/thermostat.ics');
       ics_file.on('open', function(fd) {
         ics_file.write(body);
 	ics_file.end();
@@ -236,7 +236,7 @@ function get_calendar(){
   .then( function(body) {
     return Bluebird.all([
       parse_ics(body),
-      write_ics(body, 'readings/thermostat.ics')
+      write_ics(body, __dirname + '/readings/thermostat.ics')
     ])
     .then( function (res) {
       return res[0];
@@ -244,7 +244,7 @@ function get_calendar(){
   })
   .catch( function(err) {
     console.log("error in get_calendar(): " + err);
-    return read_ics('readings/thermostat.ics')
+    return read_ics(__dirname + '/readings/thermostat.ics')
     .then( function(body) {
       return parse_ics(body)
       .then( function (res) {
