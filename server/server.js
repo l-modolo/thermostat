@@ -55,7 +55,7 @@ function heatindex(temperature, humidity) {
   if (HI < 80.0) {
     HI = 0.5 * (T + 61.0 + ((T-68.0)*1.2) + (RH*0.094));
   }
-  return (HI - 32.00) / 1.8000;
+  return Math.round((HI - 32.00) / 1.8000 * 100) / 100;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -377,12 +377,45 @@ app.get('/', function(req, res) {
   });
 });
 
+app.set('view engine', 'ejs');
 app.get('/thermostat', function(req, res) {
   heat().then( function(heating) {
-    res.send(heating2string(heating));
+    var heatingstatus = "off";
+    if (heating.heat == 1) {
+      heatingstatus = "on";
+    }
+    res.render(
+      __dirname + '/view/thermostat',
+      {
+        heatstatus: heatingstatus,
+        heatcal: heating.calendar,
+        tempint: heating.indoor_temperature,
+        humiint: heating.indoor_humidity,
+        hiint: heating.indoor_hi,
+        tempext: heating.outdoor_temperature,
+        humiext: heating.outdoor_humidity,
+        hiext: heating.outdoor_hi,
+      }
+    );
     console.log(heating2string(heating));
   }).catch( function(heating) {
-    res.send(heating2string(heating));
+    var heatingstatus = "off";
+    if (heating.heat == 1) {
+      heatingstatus = "on";
+    }
+    res.render(
+      __dirname + '/view/thermostat',
+      {
+        heatstatus: heatingstatus,
+        heatcal: heating.calendar,
+        tempint: heating.indoor_temperature,
+        humiint: heating.indoor_humidity,
+        hiint: heating.indoor_hi,
+        tempext: heating.outdoor_temperature,
+        humiext: heating.outdoor_humidity,
+        hiext: heating.outdoor_hi,
+      }
+    );
     console.log(heating2string(heating));
   });
 });
