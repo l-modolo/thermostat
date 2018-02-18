@@ -36,6 +36,9 @@ var thermometer_back = {
   heatindex: 19
 };
 var weather_back = {temperature: 10, humidity: 80, heatindex: 8};
+var last_thermometer_check = new Date();
+var last_calendar_check = new Date();
+var last_weather_check = new Date();
 
 
 function heatindex(temperature, humidity) {
@@ -239,6 +242,7 @@ function get_calendar(){
       write_ics(body, __dirname + '/readings/thermostat.ics')
     ])
     .then( function (res) {
+      last_calendar_check = new Date();
       return res[0];
     });
   })
@@ -266,6 +270,7 @@ function get_thermometer() {
         humidity: parseFloat(res.humidity),
         heatindex: heatindex(res.temperature, res.humidity)
       };
+      last_thermometer_check = new Date();
       return(thermometer_back);
     })
     .catch(function (err){
@@ -287,6 +292,7 @@ function get_weather() {
         humidity: parseFloat(res.humidity),
         heatindex: heatindex(res.temp, res.humidity)
       }
+      last_weather_check = new Date();
       return(weather_back);
     })
     .catch(function (err){
@@ -322,12 +328,15 @@ function heat() {
     return( {
       heat: heat_status,
       calendar: calendar_temp,
+      calendar_last_check: last_calendar_check.toLocaleString(),
       indoor_temperature: indoor.temperature,
       indoor_humidity: indoor.humidity,
       indoor_hi: indoor.heatindex,
+      indoor_last_check: last_thermometer_check.toLocaleString(),
       outdoor_temperature: outdoor.temperature,
       outdoor_humidity: outdoor.humidity,
       outdoor_hi: outdoor.heatindex,
+      outdoor_last_check: last_weather_check.toLocaleString(),
       date: date_now.getTime()
     } );
   })
@@ -336,12 +345,15 @@ function heat() {
     return( {
       heat: heat_status,
       calendar: err,
+      calendar_last_check: last_calendar_check.toLocaleString(),
       indoor_temperature: err,
       indoor_humidity: err,
       indoor_hi: err,
+      indoor_last_check: last_thermometer_check.toLocaleString(),
       outdoor_temperature: err,
       outdoor_humidity: err,
       outdoor_hi: err,
+      outdoor_last_check: last_weather_check.toLocaleString(),
       date: date_now.getTime()
     } );
   });
@@ -389,12 +401,15 @@ app.get('/thermostat', function(req, res) {
       {
         heatstatus: heatingstatus,
         heatcal: heating.calendar,
+        heatdate: heating.calendar_last_check,
         tempint: heating.indoor_temperature,
         humiint: heating.indoor_humidity,
         hiint: heating.indoor_hi,
+        dateint: heating.indoor_last_check,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
+        dateext: heating.outdoor_last_check
       }
     );
     console.log(heating2string(heating));
@@ -408,19 +423,22 @@ app.get('/thermostat', function(req, res) {
       {
         heatstatus: heatingstatus,
         heatcal: heating.calendar,
+        heatdate: heating.calendar_last_check,
         tempint: heating.indoor_temperature,
         humiint: heating.indoor_humidity,
         hiint: heating.indoor_hi,
+        dateint: heating.indoor_last_check,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
+        dateext: heating.outdoor_last_check
       }
     );
     console.log(heating2string(heating));
   });
 });
 
-app.listen(8080);
+app.listen(80);
 
 // .then({
 
