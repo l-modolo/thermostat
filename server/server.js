@@ -84,35 +84,41 @@ function get_day(date) {
   return(weekday[date.getDay()]);
 }
 
-function match_date(line, re) {
-  var year = line.replace(re, '$1');
-  var month = line.replace(re, '$2') - 1;
-  var day = line.replace(re, '$3');
-  var hour = line.replace(re, '$4');
-  var min = line.replace(re, '$5');
+function match_date(line, re, tzone) {
+  var year = parseInt(line.replace(re, '$1'));
+  var month = parseInt(line.replace(re, '$2')) - 1;
+  var day = parseInt(line.replace(re, '$3'));
+  var hour = parseInt(line.replace(re, '$4')) + parseInt(tzone);
+  var min = parseInt(line.replace(re, '$5'));
   return new Date(year, month, day, hour, min, 0, 0);
 }
 
-function match_rep(line) {
+function match_rep(line, tzone) {
   var re_day = /RRULE:.*BYDAY=([A-Z]{2}).*/;
   var re_until = /RRULE:.*UNTIL=(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
   var day = line.replace(re_day, '$1').slice(0, -1);
   var until = zero_date();
   if (line.match(re_until)) {
-    until = match_date(line, re_until);
+    until = match_date(line, re_until, tzone);
   }
   return ({ day: day, until: until });
 }
 
-function update_date(date, date_now) {
+function update_date(date, date_now, dayp) {
   return new Date(
     date_now.getFullYear(),
     date_now.getMonth(),
-    date_now.getDate(),
+    date_now.getDate() + dayp,
     date.getHours(),
     date.getMinutes(),
     0, 0
   )
+}
+
+function update_event(event, date_now) {
+    event.start = update_date(event.start, date_now, 0);
+    event.stop = update_date(event.stop, event.start, 1);
+    return event;
 }
 
 function apply_rep(event, date_now){
@@ -126,18 +132,16 @@ function apply_rep(event, date_now){
     return event;
   }
   if (event.rep.day == get_day(date_now)) {
-    event.start = update_date(event.start, date_now);
-    event.stop = update_date(event.stop, date_now);
+    return update_event(event, date_now);
   }
   return event;
 }
 
-function parse_ics_event(body, date_now) {
+function parse_ics_event(lines, date_now, tzone) {
   var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
   var re_stop = /DTEND.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
   var re_temp = /SUMMARY:(.*)/;
   var re_rep = /RRULE:.*/;
-  var lines = body.split("\n");
   event = {
     start: zero_date(),
     stop: zero_date(),
@@ -146,10 +150,10 @@ function parse_ics_event(body, date_now) {
   }
   for(i = 0; i < lines.length; i++) {
     if (lines[i].match(re_start)) {
-      event.start = match_date( lines[i], re_start );
+      event.start = match_date( lines[i], re_start, tzone );
     }
     if (lines[i].match(re_stop)) {
-      event.stop = match_date( lines[i], re_stop );
+      event.stop = match_date( lines[i], re_stop, tzone );
     }
     if (lines[i].match(re_temp)) {
       event.temp = parseFloat(lines[i].replace(re_temp, '$1'));
@@ -158,7 +162,7 @@ function parse_ics_event(body, date_now) {
       }
     }
     if (lines[i].match(re_rep)) {
-      event.rep = match_rep(lines[i]);
+      event.rep = match_rep(lines[i], tzone);
     }
   }
   event = apply_rep(event, date_now);
@@ -168,21 +172,23 @@ function parse_ics_event(body, date_now) {
 function parse_ics(body) {
   return new Promise(function (fulfill, reject){
     var re_start = /DTSTART.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+    var re_tzone = /TZOFFSETTO:+(\d{2})\d{2}.*/;
     var date_now = new Date();
     var temp_found = default_temp();
     var lines = body.split('\n');
-    var event_body = "";
+    var tzone = "2";
     var i = 0;
     for(i = 0; i < lines.length; i++) {
+      if (lines[i].match(re_tzone)) {
+	tzone = lines[i].replace(re_tzone, '$1');
+      }
       if (lines[i].match(re_start)) {
-        var event = parse_ics_event(event_body, date_now);
+        var event = parse_ics_event(lines.slice(i, i+13), date_now, tzone);
+	i = i + 13;
         if (event.start.getTime() <= date_now.getTime() &&
             date_now.getTime() <= event.stop.getTime()) {
           temp_found = event.temp;
         }
-        event_body = lines[i] + "\n";
-      } else {
-        event_body = event_body + lines[i] + "\n";
       }
     }
     fulfill(temp_found);
@@ -314,6 +320,7 @@ function heat() {
     get_weather()
   ])
   .then( function ( temperatures ) {
+    console.log("calendar reading : " + temperatures[0])
     calendar_temp = temperatures[0];
     indoor = temperatures[1];
     outdoor = temperatures[2];
