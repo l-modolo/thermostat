@@ -93,10 +93,17 @@ function match_date(line, re, tzone) {
   return new Date(year, month, day, hour, min, 0, 0);
 }
 
-function match_rep(line, tzone) {
+function match_rep(event, line, tzone) {
+  var re_freq = /RRULE:FREQ=WEEKLY.*/;
   var re_day = /RRULE:.*BYDAY=(-\d){0,1}([A-Z]{2}).*/;
   var re_until = /RRULE:.*UNTIL=(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-  var day = line.replace(re_day, '$2').slice(0, -1);
+  var day = ''
+  if (line.match(re_freq)) {
+    day = get_day(event.start);
+  }
+  if (line.match(re_day)) {
+    day = line.replace(re_day, '$2').slice(0, -1);
+  }
   var until = zero_date();
   if (line.match(re_until)) {
     until = match_date(line, re_until, tzone);
@@ -116,8 +123,9 @@ function update_date(date, date_now, dayp) {
 }
 
 function update_event(event, date_now) {
+    var day_diff = event.stop.getDate() - event.start.getDate();
     event.start = update_date(event.start, date_now, 0);
-    event.stop = update_date(event.stop, event.start, 0);
+    event.stop = update_date(event.stop, date_now, day_diff);
     return event;
 }
 
@@ -162,7 +170,7 @@ function parse_ics_event(lines, date_now, tzone) {
       }
     }
     if (lines[i].match(re_rep)) {
-      event.rep = match_rep(lines[i], tzone);
+      event.rep = match_rep(event, lines[i], tzone);
     }
   }
   event = apply_rep(event, date_now);
