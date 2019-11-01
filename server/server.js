@@ -85,18 +85,25 @@ function get_day(date) {
 }
 
 function match_date(line, re, tzone) {
-  var year = parseInt(line.replace(re, '$1'));
-  var month = parseInt(line.replace(re, '$2')) - 1;
-  var day = parseInt(line.replace(re, '$3'));
-  var hour = parseInt(line.replace(re, '$4')) + parseInt(tzone);
-  var min = parseInt(line.replace(re, '$5'));
+  var year = parseInt(line.replace(re, '$2'));
+  var month = parseInt(line.replace(re, '$3')) - 1;
+  var day = parseInt(line.replace(re, '$4'));
+  var hour = parseInt(line.replace(re, '$5')) + parseInt(tzone);
+  var min = parseInt(line.replace(re, '$6'));
   return new Date(year, month, day, hour, min, 0, 0);
 }
 
-function match_rep(line, tzone) {
+function match_rep(event, line, tzone) {
+  var re_freq = /RRULE:FREQ=WEEKLY.*/;
   var re_day = /RRULE:.*BYDAY=(-\d){0,1}([A-Z]{2}).*/;
   var re_until = /RRULE:.*UNTIL=(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-  var day = line.replace(re_day, '$2').slice(0, -1);
+  var day = ''
+  if (line.match(re_freq)) {
+    day = get_day(event.start);
+  }
+  if (line.match(re_day)) {
+    day = line.replace(re_day, '$2').slice(0, -1);
+  }
   var until = zero_date();
   if (line.match(re_until)) {
     until = match_date(line, re_until, tzone);
@@ -116,8 +123,9 @@ function update_date(date, date_now, dayp) {
 }
 
 function update_event(event, date_now) {
+    var day_diff = event.stop.getDate() - event.start.getDate();
     event.start = update_date(event.start, date_now, 0);
-    event.stop = update_date(event.stop, event.start, 0);
+    event.stop = update_date(event.stop, date_now, day_diff);
     return event;
 }
 
@@ -138,8 +146,8 @@ function apply_rep(event, date_now){
 }
 
 function parse_ics_event(lines, date_now, tzone) {
-  var re_start = /DTSTART;TZID.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-  var re_stop = /DTEND;TZID.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+  var re_start = /DTSTART(;TZID.*)*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
+  var re_stop = /DTEND(;TZID.*)*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
   var re_temp = /SUMMARY:(.*)/;
   var re_rep = /RRULE:.*/;
   event = {
@@ -162,41 +170,52 @@ function parse_ics_event(lines, date_now, tzone) {
       }
     }
     if (lines[i].match(re_rep)) {
-      event.rep = match_rep(lines[i], tzone);
+      event.rep = match_rep(event, lines[i], tzone);
     }
   }
   event = apply_rep(event, date_now);
+	    console.log(event)
   return event;
 }
 
 function parse_ics(body) {
   return new Promise(function (fulfill, reject){
-    var re_start = /DTSTART;TZID.*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-    var re_tzone = /TZOFFSETTO:+(\d{2})\d{2}.*/;
-    var date_now = new Date();
-    var temp_found = default_temp();
-    var lines = body.split('\n');
-    var tzone = "2";
-    date_now.setHours(date_now.getHours()+parseInt(tzone));
-    var i = 0;
-    while(i < lines.length) {
-      if (lines[i].match(re_tzone)) {
-	tzone = lines[i].replace(re_tzone, '$1');
-    	date_now = new Date();
-    date_now.setHours(date_now.getHours()+parseInt(tzone));
-      }
-      if (lines[i].match(re_start)) {
-        var event = parse_ics_event(lines.slice(i, i+13), date_now, tzone);
-	i = i + 13;
-        if (event.start.getTime() <= date_now.getTime() &&
-          date_now.getTime() <= event.stop.getTime()) {
-          temp_found = event.temp;
-	  i = lines.length;
-        }
-      }
-      i = i + 1;
-    }
-    fulfill(temp_found);
+	var re_start = /BEGIN:VEVENT/
+	var re_stop = /END:VEVENT/;
+	var re_tzone = /TZOFFSETTO:+(\d{2})\d{2}.*/;
+	var date_now = new Date();
+	var temp_found = default_temp();
+	var lines = body.split('\n');
+	var tzone = "2";
+	date_now.setHours(date_now.getHours()+parseInt(tzone));
+	var i = 0;
+	var j = -1;
+	while(i < lines.length) {
+		if (lines[i].match(re_tzone)) {
+			tzone = lines[i].replace(re_tzone, '$1');
+			date_now = new Date();
+			date_now.setHours(date_now.getHours()+parseInt(tzone));
+		}
+		if (lines[i].match(re_start)) {
+			j = i
+		}
+		if (j != -1 && lines[i].match(re_stop)) {
+			console.log(i - j)
+		      console.log(lines[j])
+		      console.log(lines[i])
+
+			var event = parse_ics_event(lines.slice(j, i), date_now, tzone);
+
+			if (event.start.getTime() <= date_now.getTime() &&
+			  date_now.getTime() <= event.stop.getTime()) {
+				temp_found = event.temp;
+				i = lines.length;
+			}
+			j = -1
+		}
+		i = i + 1;
+	}
+	fulfill(temp_found);
   });
 }
 
