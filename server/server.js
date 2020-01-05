@@ -11,7 +11,7 @@ function read_config() {
     }
     return(data);
   });
-  data_conf = JSON.parse(data_conf)
+  data_conf = JSON.parse(data_conf);
   return(data_conf);
 }
 var config = read_config();
@@ -100,7 +100,7 @@ function match_rep(event, line, tzone) {
   var re_freq = /RRULE:FREQ=WEEKLY.*/;
   var re_day = /RRULE:.*BYDAY=(-\d){0,1}([A-Z]{2}).*/;
   var re_until = /RRULE:.*UNTIL=(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2}).*/;
-  var day = ''
+  var day = '';
   if (line.match(re_freq)) {
     day = get_day(event.start);
   }
@@ -122,7 +122,7 @@ function update_date(date, date_now, dayp) {
     date.getHours(),
     date.getMinutes(),
     0, 0
-  )
+  );
 }
 
 function update_event(event, date_now) {
@@ -158,7 +158,7 @@ function parse_ics_event(lines, date_now, tzone) {
     stop: zero_date(),
     temp: default_temp(),
     rep: ""
-  }
+  };
   for(i = 0; i < lines.length; i++) {
     if (lines[i].match(re_start)) {
       event.start = match_date( lines[i], re_start, tzone );
@@ -177,13 +177,13 @@ function parse_ics_event(lines, date_now, tzone) {
     }
   }
   event = apply_rep(event, date_now);
-	    console.log(event)
+  console.log(event);
   return event;
 }
 
 function parse_ics(body) {
   return new Promise(function (fulfill, reject){
-	var re_start = /BEGIN:VEVENT/
+	var re_start = /BEGIN:VEVENT/;
 	var re_stop = /END:VEVENT/;
 	var re_tzone = /TZOFFSETTO:+(\d{2})\d{2}.*/;
 	var date_now = new Date();
@@ -200,12 +200,12 @@ function parse_ics(body) {
 			date_now.setHours(date_now.getHours()+parseInt(tzone));
 		}
 		if (lines[i].match(re_start)) {
-			j = i
+			j = i;
 		}
 		if (j != -1 && lines[i].match(re_stop)) {
-			console.log(i - j)
-		      console.log(lines[j])
-		      console.log(lines[i])
+			console.log(i - j);
+      console.log(lines[j]);
+      console.log(lines[i]);
 
 			var event = parse_ics_event(lines.slice(j, i), date_now, tzone);
 
@@ -214,7 +214,7 @@ function parse_ics(body) {
 				temp_found = event.temp;
 				i = lines.length;
 			}
-			j = -1
+			j = -1;
 		}
 		i = i + 1;
 	}
@@ -344,7 +344,7 @@ function get_weather() {
         temperature: parseFloat(res.temp),
         humidity: parseFloat(res.humidity),
         heatindex: heatindex(res.temp, res.humidity)
-      }
+      };
       last_weather_check = new Date();
       return(weather_back);
     })
@@ -368,7 +368,7 @@ function heat() {
     get_controler()
   ])
   .then( function ( temperatures ) {
-    console.log("calendar reading : " + temperatures[0])
+    console.log("calendar reading : " + temperatures[0]);
     calendar_temp = temperatures[0];
     indoor = temperatures[1];
     outdoor = temperatures[2];
