@@ -35,6 +35,9 @@ var thermometer_back = {
   humidity: 40,
   heatindex: 19
 };
+var controler_back = {
+  temperature: config.temperature_base,
+};
 var weather_back = {temperature: 10, humidity: 80, heatindex: 8};
 var last_thermometer_check = new Date();
 var last_calendar_check = new Date();
@@ -289,7 +292,7 @@ function get_calendar(){
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-///////////////////////////// get temperature captor ///////////////////////////
+///////////////////////////// get temperature sensor ///////////////////////////
 
 function get_thermometer() {
   return( Request(thermometer_url + "both")
@@ -306,6 +309,26 @@ function get_thermometer() {
     .catch(function (err){
       console.log("error: get_thermometer() " + err);
       return(thermometer_back);
+    })
+  );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// get controler sensor /////////////////////////////
+
+function get_controler() {
+  return( Request(controler_url + "both")
+    .then(function (body) {
+      var res = JSON.parse(body);
+      controler_back = {
+        temperature: parseFloat(res.internal),
+      };
+      last_thermometer_check = new Date();
+      return(controler_back);
+    })
+    .catch(function (err){
+      console.log("error: get_controler() " + err);
+      return(controler_back);
     })
   );
 }
@@ -341,14 +364,20 @@ function heat() {
   return Bluebird.all([
     get_calendar(),
     get_thermometer(),
-    get_weather()
+    get_weather(),
+    get_controler()
   ])
   .then( function ( temperatures ) {
     console.log("calendar reading : " + temperatures[0])
     calendar_temp = temperatures[0];
     indoor = temperatures[1];
     outdoor = temperatures[2];
+    indoor_controler = temperatures[3];
     if (indoor.temperature <= calendar_temp + heat_status_lag) {
+      heat_status = 1;
+      heat_status_lag = heat_lag;
+    }
+    if (indoor_controler.temperature <= calendar_temp + heat_status_lag) {
       heat_status = 1;
       heat_status_lag = heat_lag;
     }
@@ -364,6 +393,7 @@ function heat() {
       indoor_humidity: indoor.humidity,
       indoor_hi: indoor.heatindex,
       indoor_last_check: last_thermometer_check.toLocaleString(),
+      indoor_controler_temperature: indoor_controler.temperature,
       outdoor_temperature: outdoor.temperature,
       outdoor_humidity: outdoor.humidity,
       outdoor_hi: outdoor.heatindex,
@@ -381,6 +411,7 @@ function heat() {
       indoor_humidity: err,
       indoor_hi: err,
       indoor_last_check: last_thermometer_check.toLocaleString(),
+      indoor_controler_temperature: err,
       outdoor_temperature: err,
       outdoor_humidity: err,
       outdoor_hi: err,
@@ -398,6 +429,7 @@ function heating2string(heating){
     heating.indoor_temperature + ", " +
     heating.indoor_humidity + ", " +
     heating.indoor_hi + ", " +
+    heating.indoor_controler_temperature + ", " +
     heating.outdoor_temperature + ", " +
     heating.outdoor_humidity + ", " +
     heating.outdoor_hi
@@ -437,6 +469,7 @@ app.get('/thermostat', function(req, res) {
         humiint: heating.indoor_humidity,
         hiint: heating.indoor_hi,
         dateint: heating.indoor_last_check,
+        controlertempint: heating.indoor_controler_temperature,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
@@ -459,6 +492,7 @@ app.get('/thermostat', function(req, res) {
         humiint: heating.indoor_humidity,
         hiint: heating.indoor_hi,
         dateint: heating.indoor_last_check,
+        controlertempint: heating.indoor_controler_temperature,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
