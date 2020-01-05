@@ -33,7 +33,7 @@ void wificonnect(){
 }
 
 void handle_root() {
-  server.send(200, "text/plain", "All systems go. Read data from /temp or or /temp_c or /humidity or /heatindex.");
+  server.send(200, "text/plain", "All systems go. Read data from /both.");
   delay(100);
 }
 
@@ -108,4 +108,3 @@ void loop(void){
   ArduinoOTA.handle();
   wificonnect();
 }
-
