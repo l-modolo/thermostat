@@ -40,6 +40,7 @@ var controler_back = {
 };
 var weather_back = {temperature: 10, humidity: 80, heatindex: 8};
 var last_thermometer_check = new Date();
+var last_controler_check = new Date();
 var last_calendar_check = new Date();
 var last_weather_check = new Date();
 
@@ -323,7 +324,7 @@ function get_controler() {
       controler_back = {
         temperature: parseFloat(res.internal),
       };
-      last_thermometer_check = new Date();
+      last_controler_check = new Date();
       return(controler_back);
     })
     .catch(function (err){
@@ -394,6 +395,7 @@ function heat() {
       indoor_hi: indoor.heatindex,
       indoor_last_check: last_thermometer_check.toLocaleString(),
       indoor_controler_temperature: indoor_controler.temperature,
+      indoor_controler_last_check: last_controler_check.toLocaleString(),
       outdoor_temperature: outdoor.temperature,
       outdoor_humidity: outdoor.humidity,
       outdoor_hi: outdoor.heatindex,
@@ -412,6 +414,7 @@ function heat() {
       indoor_hi: err,
       indoor_last_check: last_thermometer_check.toLocaleString(),
       indoor_controler_temperature: err,
+      indoor_controler_last_check: last_controler_check.toLocaleString(),
       outdoor_temperature: err,
       outdoor_humidity: err,
       outdoor_hi: err,
@@ -430,6 +433,7 @@ function heating2string(heating){
     heating.indoor_humidity + ", " +
     heating.indoor_hi + ", " +
     heating.indoor_controler_temperature + ", " +
+    heating.indoor_controler_lastcheck + ", " +
     heating.outdoor_temperature + ", " +
     heating.outdoor_humidity + ", " +
     heating.outdoor_hi
@@ -470,6 +474,7 @@ app.get('/thermostat', function(req, res) {
         hiint: heating.indoor_hi,
         dateint: heating.indoor_last_check,
         controlertempint: heating.indoor_controler_temperature,
+        controlerdateint: heating.indoor_controler_lastcheck,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
@@ -493,6 +498,7 @@ app.get('/thermostat', function(req, res) {
         hiint: heating.indoor_hi,
         dateint: heating.indoor_last_check,
         controlertempint: heating.indoor_controler_temperature,
+        controlerdateint: heating.indoor_controler_lastcheck,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
