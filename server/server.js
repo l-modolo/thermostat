@@ -318,7 +318,7 @@ function get_thermometer() {
 ///////////////////////////// get controler sensor /////////////////////////////
 
 function get_controler() {
-  return( Request(controler_url + "both")
+  return( Request(controler_url)
     .then(function (body) {
       var res = JSON.parse(body);
       controler_back = {
