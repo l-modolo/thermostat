@@ -105,23 +105,23 @@ void readinternalthermometer(){
   if ( err != SimpleDHTErrSuccess) {
     Serial.println("no internal reading.");
     relayOff();
-    controler_status = "{server: nan, thermometer: nan, internal: nan, relay: off}";
+    controler_status = "{\"server\": nan, \"thermometer\": nan, \"internal\": nan, \"relay\": off}";
   } else {
     if (temperature < default_temp + internal_temp_correction + heating) {
       Serial.println("too cold.");
       relayOn();
       heating = temp_lag;
-      controler_status = "{server: nan, thermometer: nan, internal: " +
+      controler_status = "{\"server\": nan, \"thermometer\": nan, \"internal\": " +
         String((float) temperature) + 
-        ", relay: on}";
+        ", \"relay\": on}";
     }
     if (temperature >= default_temp + internal_temp_correction + heating) {
       Serial.println("too hot.");
       relayOff();
       heating = 0.0;
-      controler_status = "{server: nan, thermometer: nan, internal: " +
+      controler_status = "{\"server\": nan, \"thermometer\": nan, \"internal\": " +
         String((float) temperature) + 
-        ", relay: off}";
+        ", \"relay\": off}";
     }
   }
 }
@@ -142,29 +142,29 @@ void readthermometer(){
       if (line.equals("nan")) {
         Serial.println("no thermometer reading.");
         relayOff();
-        controler_status = "{server: nan, thermometer: nan, internal: " +
+        controler_status = "{\"server\": nan, \"thermometer\": nan, \"internal\": " +
             readinternaltempString() + 
-            ", relay: off}";
+            ", \"relay\": off}";
       } else {
         if (line.toFloat() < default_temp + heating) {
           Serial.println("too cold.");
           relayOn();
           heating = temp_lag;
-          controler_status = "{server: nan, thermometer:" +
+          controler_status = "{\"server\": nan, \"thermometer\":" +
             line + 
-            ", internal: " +
+            ", \"internal\": " +
             readinternaltempString() + 
-            ", relay: on}";
+            ", \"relay\": on}";
         }
         if (line.toFloat() >= default_temp + heating) {
           Serial.println("too hot.");
           relayOff();
           heating = 0.0;
-          controler_status = "{server: nan, thermometer :" +
+          controler_status = "{\"server\": nan, \"thermometer\" :" +
             line + 
-            ", internal: " +
+            ", \"internal\": " +
             readinternaltempString() + 
-            ", relay: off}";
+            ", \"relay\": off}";
         }
       }
     }

@@ -66,12 +66,12 @@ String get_both() {
   Serial.println("temp");
   if ( err != SimpleDHTErrSuccess) {
     Serial.println("nan");
-    server.send(200, "text/plain", "{temperature: nan, humidity: nan}");
+    server.send(200, "text/plain", "{\"temperature\": nan, \"humidity\": nan}");
   } else {
     Serial.println(String((float) temperature));
     server.send(200, "text/plain",
-      "{temperature: " + String((float) temperature) + 
-      ", humidity: " + String((float) humidity) + "}");
+      "{\"temperature\": " + String((float) temperature) + 
+      ", \"humidity\": " + String((float) humidity) + "}");
   }
 }
 
