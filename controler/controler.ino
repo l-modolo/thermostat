@@ -16,9 +16,9 @@ unsigned long current_time;
 float heating = 0;
 float temperature = 0.0;
 float humidity = 0.0;
-String relay_status = "off";
-String server_status = "nan";
-String thermometer_status = "nan";
+String relay_status = "\"off\"";
+String server_status = "\"nan\"";
+String thermometer_status = "\"nan\"";
 int err = SimpleDHTErrSuccess;
 
 WiFiClient client;
@@ -80,11 +80,11 @@ void getinfos (){
     current_time = millis();
     if (!client.connect(server, 80)) {
       Serial.println("Connection to server failed");
-      server_status = "nan";
+      server_status = "\"nan\"";
       // connect to thermometer
       if (!client.connect(thermometer, 80)) {
         Serial.println("Connection to thermometer failed");
-        thermometer_status = "nan";
+        thermometer_status = "\"nan\"";
         readinternalthermometer();
       } else {
         readthermometer();
@@ -99,7 +99,7 @@ void getinfos (){
 String readinternaltempString(){
   err = dht22.read2(pinDHT22, &temperature, &humidity, NULL);
   if ( err != SimpleDHTErrSuccess) {
-    return("nan");
+    return("\"nan\"");
   } else {
     return(String((float) temperature));
   }
@@ -146,7 +146,7 @@ void readthermometer(){
       Serial.println(line);
       if (line.equals("nan")) {
         Serial.println("no thermometer reading.");
-        thermometer_status = "nan";
+        thermometer_status = "\"nan\"";
         relayOff();
         controler_status = "{\"server\": " + server_status + ", \"thermometer\": " +
             thermometer_status +
@@ -192,7 +192,7 @@ void readserver(){
     String line = client.readStringUntil('\n');
     Serial.println(line);
     if (line.equals("on")) {
-      server_status = "on";
+      server_status = "\"on\"";
       Serial.println("Server says to be on.");
       relayOn();
       controler_status = "{\"server\" = " + server_status + ", \"thermometer\": " +
@@ -203,7 +203,7 @@ void readserver(){
     }
     if (line.equals("off")) {
       Serial.println("Server says to be off.");
-      server_status = "off";
+      server_status = "\"off\"";
       relayOff();
       controler_status = "\"server\" = " + server_status + ", \"thermometer\": " +
             thermometer_status + 
@@ -215,13 +215,13 @@ void readserver(){
 }
 
 void relayOn() {
-  relay_status = "one";
+  relay_status = "\"on\"";
   Serial.println("relay on");
   digitalWrite(resetPin, LOW);
 }
 
 void relayOff() {
-  relay_status = "off";
+  relay_status = "\"off\"";
   Serial.println("relay off");
   digitalWrite(resetPin, HIGH);
 }
