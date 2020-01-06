@@ -178,7 +178,6 @@ function parse_ics_event(lines, date_now, tzone) {
     }
   }
   event = apply_rep(event, date_now);
-  console.log(event);
   return event;
 }
 
@@ -204,10 +203,6 @@ function parse_ics(body) {
 			j = i;
 		}
 		if (j != -1 && lines[i].match(re_stop)) {
-			console.log(i - j);
-      console.log(lines[j]);
-      console.log(lines[i]);
-
 			var event = parse_ics_event(lines.slice(j, i), date_now, tzone);
 
 			if (event.start.getTime() <= date_now.getTime() &&
