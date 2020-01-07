@@ -2,6 +2,7 @@
   "agenda_url": "https://calendar.google.com/calendar/ical/.../basic.ics",
   "controler_url": "http://192.168.0.3/",
   "thermometer_url": "http://192.168.0.4/",
+  "controler_ip": "192.168.0.3",
   "city_id": "...",
   "api_id": "...",
   "temperature_base": 17.00,

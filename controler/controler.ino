@@ -127,9 +127,10 @@ void readinternalthermometer(){
 
 void readthermometer(){
   Serial.println("Connected to thermometer - sending request...");
-  client.print(String("GET /temp HTTP/1.1\r\n") +
-           "Host: " + thermometer + "\r\n" +
-           "Connection: close\r\n\r\n");
+  client.println("GET /temp HTTP/1.1");
+  client.println(String("Host: ") + String(thermometer));
+  client.println("Connection: close");
+  client.println();
   Serial.println("Request sent - waiting for reply...");
   delay(1000);
   i = 0;
@@ -159,9 +160,10 @@ void readthermometer(){
 
 void readserver(){
   Serial.println("Connected to server - sending request...");
-  client.print(String("GET / HTTP/1.1\r\n") +
-               "Host: " + server + "\r\n" +
-               "Connection: close\r\n\r\n");
+  client.println(String("GET /?t=") + readinternaltempString() + String(" HTTP/1.1"));
+  client.println(String("Host: ") + String(server));
+  client.println("Connection: close");
+  client.println();
   Serial.println("Request sent - waiting for reply...");
   delay(1000);
   // Read the entire response and flush it to Serial output

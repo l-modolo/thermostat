@@ -18,6 +18,7 @@ var config = read_config();
 
 const agenda_url = config.agenda_url;
 const controler_url = config.controler_url;
+const controler_ip = config.controler_ip;
 const thermometer_url = config.thermometer_url;
 const city_id = config.city_id;
 const api_id = config.api_id;
@@ -35,9 +36,7 @@ var thermometer_back = {
   humidity: 40,
   heatindex: 19
 };
-var controler_back = {
-  temperature: config.temperature_base,
-};
+var controler_back = config.temperature_base;
 var weather_back = {temperature: 10, humidity: 80, heatindex: 8};
 var last_thermometer_check = new Date();
 var last_controler_check = new Date();
@@ -316,9 +315,7 @@ function get_controler() {
   return( Request(controler_url)
     .then(function (body) {
       var res = JSON.parse(body);
-      controler_back = {
-        temperature: parseFloat(res.internal),
-      };
+      controler_back = parseFloat(res.internal);
       last_controler_check = new Date();
       return(controler_back);
     })
@@ -354,7 +351,7 @@ function get_weather() {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// set heating status //////////////////////////////
 
-function heat(controler_temp) {
+function heat(indoor_controler) {
   var heat_status = 0;
   var date_now = new Date();
   return Bluebird.all([
@@ -363,16 +360,14 @@ function heat(controler_temp) {
     get_weather(),
   ])
   .then( function ( temperatures ) {
-    console.log("calendar reading : " + temperatures[0]);
     calendar_temp = temperatures[0];
     indoor = temperatures[1];
     outdoor = temperatures[2];
-    indoor_controler = controler_temp;
     if (indoor.temperature <= calendar_temp + heat_status_lag) {
       heat_status = 1;
       heat_status_lag = heat_lag;
     }
-    if (indoor_controler.temperature <= calendar_temp + heat_status_lag) {
+    if (indoor_controler <= calendar_temp + heat_status_lag) {
       heat_status = 1;
       heat_status_lag = heat_lag;
     }
@@ -388,7 +383,7 @@ function heat(controler_temp) {
       indoor_humidity: indoor.humidity,
       indoor_hi: indoor.heatindex,
       indoor_last_check: last_thermometer_check.toLocaleString(),
-      indoor_controler_temperature: indoor_controler.temperature,
+      indoor_controler_temperature: indoor_controler,
       indoor_controler_last_check: last_controler_check.toLocaleString(),
       outdoor_temperature: outdoor.temperature,
       outdoor_humidity: outdoor.humidity,
@@ -427,7 +422,6 @@ function heating2string(heating){
     heating.indoor_humidity + ", " +
     heating.indoor_hi + ", " +
     heating.indoor_controler_temperature + ", " +
-    heating.indoor_controler_lastcheck + ", " +
     heating.outdoor_temperature + ", " +
     heating.outdoor_humidity + ", " +
     heating.outdoor_hi
@@ -436,7 +430,10 @@ function heating2string(heating){
 
 var app = Express();
 app.get('/', function(req, res) {
-  heat().then( function(heating) {
+  if (req.ip == "::ffff:" + controler_ip){
+	  controler_back = req.query.t;
+  }
+  heat(controler_back).then( function(heating) {
     if (heating.heat == 1) {
 	    res.send("on");
     } else {
@@ -452,7 +449,7 @@ app.get('/', function(req, res) {
 
 app.set('view engine', 'ejs');
 app.get('/thermostat', function(req, res) {
-  heat(req.query.t).then( function(heating) {
+  heat(controler_back).then( function(heating) {
     var heatingstatus = "off";
     if (heating.heat == 1) {
       heatingstatus = "on";
@@ -468,7 +465,6 @@ app.get('/thermostat', function(req, res) {
         hiint: heating.indoor_hi,
         dateint: heating.indoor_last_check,
         controlertempint: heating.indoor_controler_temperature,
-        controlerdateint: heating.indoor_controler_lastcheck,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
@@ -492,7 +488,6 @@ app.get('/thermostat', function(req, res) {
         hiint: heating.indoor_hi,
         dateint: heating.indoor_last_check,
         controlertempint: heating.indoor_controler_temperature,
-        controlerdateint: heating.indoor_controler_lastcheck,
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
