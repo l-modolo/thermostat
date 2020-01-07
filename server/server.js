@@ -354,21 +354,20 @@ function get_weather() {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// set heating status //////////////////////////////
 
-function heat() {
+function heat(controler_temp) {
   var heat_status = 0;
   var date_now = new Date();
   return Bluebird.all([
     get_calendar(),
     get_thermometer(),
     get_weather(),
-    get_controler()
   ])
   .then( function ( temperatures ) {
     console.log("calendar reading : " + temperatures[0]);
     calendar_temp = temperatures[0];
     indoor = temperatures[1];
     outdoor = temperatures[2];
-    indoor_controler = temperatures[3];
+    indoor_controler = parseFloat(controler_temp);
     if (indoor.temperature <= calendar_temp + heat_status_lag) {
       heat_status = 1;
       heat_status_lag = heat_lag;
@@ -453,7 +452,7 @@ app.get('/', function(req, res) {
 
 app.set('view engine', 'ejs');
 app.get('/thermostat', function(req, res) {
-  heat().then( function(heating) {
+  heat(req.query.t).then( function(heating) {
     var heatingstatus = "off";
     if (heating.heat == 1) {
       heatingstatus = "on";
@@ -505,71 +504,3 @@ app.get('/thermostat', function(req, res) {
 });
 
 app.listen(80);
-
-// .then({
-
-// });
-//
-//
-// var db = new Pouchdb('temperatures');
-//
-// db.info().then(function (info) {
-//   console.log(info);
-// });
-// var date = new Date();
-// var temp_record = {
-//   "_id": date.now(),
-//   "internal": request(controler_url, function (error, response, body) {
-//       return body;
-//     }),
-//   "thermometer": request(controler_url, function (error, response, body) {
-//       return body;
-//     }),
-//   "external": request(external_url, function (error, response, body) {
-//       return JSON.parse(body)[0].main.temp;
-//     }),
-//   "status": "on",
-//   "status_lag": "timestamp"
-// };
-// db.put(temp_record);
-//
-// db.allDocs({
-//   startkey: "startkey",
-//   endkey: "endkey"
-// }).then(function (result) {
-//   // handle result
-// }).catch(function (err) {
-//   console.log(err);
-// });
-
-// var app = Express();
-//
-// app.get('/', (req, res) => res.send('Hello World!'));
-//
-// app.listen(8080, () => console.log('Example app listening on port 3000!'));
-//
-// const express = require('express');
-// const path = require('path');
-// const bodyParser = require('body-parser');
-// const app = express();
-//
-// app.engine('html', require('ejs').renderFile);
-// app.set('view engine', 'html');
-//
-// // on a un formulaire html sur l'adresse contacts
-// app.get('/contact', function (req, res) {
-//   res.sendFile(__dirname + '/vues/contact.html');
-// });
-//
-// // par défaut node ne parse pas ce qui se trouve dans POST
-// app.use('/public', express.static('static'));
-// app.use(bodyParser.urlencoded({extended:true}));
-//
-// app.get('/contact', function (req, res) {
-//   res.sendFile(__dirname + '/vues/contact.html');
-// });
-//
-// app.post('/', function (req, res) {
-//   var msg = req.body.message;
-//   res.render(__dirname + '/vues/response',{msg:msg});
-// });
