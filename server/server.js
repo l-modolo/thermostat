@@ -367,7 +367,7 @@ function heat(controler_temp) {
     calendar_temp = temperatures[0];
     indoor = temperatures[1];
     outdoor = temperatures[2];
-    indoor_controler = parseFloat(controler_temp);
+    indoor_controler = controler_temp;
     if (indoor.temperature <= calendar_temp + heat_status_lag) {
       heat_status = 1;
       heat_status_lag = heat_lag;
