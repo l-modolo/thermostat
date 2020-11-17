@@ -16,6 +16,7 @@ int err = SimpleDHTErrSuccess;
 
 void wificonnect(){
   if (WiFi.status() != WL_CONNECTED) {
+    WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     Serial.println("");
     // wait for wifi connection during 10sec
