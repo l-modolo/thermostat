@@ -511,7 +511,7 @@ app.get('/thermostat', function(req, res) {
         dateext: heating.outdoor_last_check,
         climtempint: heating.clim_temperature_interior,
         climhumint: heating.clim_humidity_interior,
-        climtempexp: heating.clim_temperature_exterior,
+        climtempext: heating.clim_temperature_exterior,
         dateclim: heating.clim_last_check
       }
     );
@@ -538,7 +538,7 @@ app.get('/thermostat', function(req, res) {
         dateext: heating.outdoor_last_check,
         climtempint: heating.clim_temperature_interior,
         climhumint: heating.clim_humidity_interior,
-        climtempexp: heating.clim_temperature_exterior,
+        climtempext: heating.clim_temperature_exterior,
         dateclim: heating.dateclim
       }
     );
