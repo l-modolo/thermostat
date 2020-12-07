@@ -39,6 +39,9 @@ var thermometer_back = {
 };
 var controler_back = config.temperature_base;
 var weather_back = {temperature: 10, humidity: 80, heatindex: 8};
+var clim_back = {temperature_interior: 10,
+  humidity_interior: 80,
+  temperature_exterior: 8};
 var last_thermometer_check = new Date();
 var last_controler_check = new Date();
 var last_calendar_check = new Date();
