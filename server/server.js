@@ -335,7 +335,7 @@ function get_controler() {
 //////////////////////////// get weather temperature ///////////////////////////
 
 function get_clim() {
-  return( Request("https://" + clim_ip + "/aircon/get_sensor_info")
+  return( Request("http://" + clim_ip + "/aircon/get_sensor_info")
     .then(function (body) {
       body = body.replace(/=([^,]+),/g, ':$1, ');
       body = body.replace(/([a-zA-Z]+)/g, '"$1"');
