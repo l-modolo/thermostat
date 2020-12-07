@@ -28,6 +28,7 @@ const weather_url = 'http://api.openweathermap.org/data/2.5/forecast?id=' +
   '&APPID=' +
   api_id +
   '&units=metric';
+const clim_url = 'http://' + clim_ip + '/aircon/get_sensor_info';
 const temperature_base = config.temperature_base;
 const temperature_max = config.temperature_max;
 const heat_lag = config.heat_lag;
@@ -335,7 +336,7 @@ function get_controler() {
 //////////////////////////// get weather temperature ///////////////////////////
 
 function get_clim() {
-  return( Request("http://" + clim_ip + "/aircon/get_sensor_info")
+  return( Request(clim_url)
     .then(function (body) {
       body = body.replace(/=([^,]+),/g, ':$1, ');
       body = body.replace(/([a-zA-Z]+)/g, '"$1"');
