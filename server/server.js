@@ -19,6 +19,7 @@ var config = read_config();
 const agenda_url = config.agenda_url;
 const controler_url = config.controler_url;
 const controler_ip = config.controler_ip;
+const clim_ip = config.clim_ip;
 const thermometer_url = config.thermometer_url;
 const city_id = config.city_id;
 const api_id = config.api_id;
@@ -42,6 +43,7 @@ var last_thermometer_check = new Date();
 var last_controler_check = new Date();
 var last_calendar_check = new Date();
 var last_weather_check = new Date();
+var last_clim_check = new Date();
 
 
 function heatindex(temperature, humidity) {
@@ -329,6 +331,31 @@ function get_controler() {
 ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////// get weather temperature ///////////////////////////
 
+function get_clim() {
+  return( Request("https://" + weather_url + "/aircon/get_sensor_info")
+    .then(function (body) {
+      body = body.replace(/=([^,]+),/g, ':$1, ');
+      body = body.replace(/([a-zA-Z]+)/g, '"$1"');
+      body = "{" + body + "}";
+      var res = JSON.parse(body).list[0].main;
+      clim_back = {
+        temperature_interior: parseFloat(res.htemp),
+        humidiy_interior: parseFloat(res.hhum),
+        temperature_exterior: parseFloat(res.otemp)
+      };
+      last_clim_check = new Date();
+      return(clim_back);
+    })
+    .catch(function (err){
+      console.log("error: get_clim() " + err);
+      return(clim_back);
+    })
+  );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////// get weather temperature ///////////////////////////
+
 function get_weather() {
   return( Request(weather_url)
     .then(function (body) {
@@ -358,11 +385,13 @@ function heat(indoor_controler) {
     get_calendar(),
     get_thermometer(),
     get_weather(),
+    get_clim()
   ])
   .then( function ( temperatures ) {
     calendar_temp = temperatures[0];
     indoor = temperatures[1];
     outdoor = temperatures[2];
+    clim = temperatures[3];
     if (indoor.temperature <= calendar_temp + heat_status_lag) {
       heat_status = 1;
       heat_status_lag = heat_lag;
@@ -389,6 +418,10 @@ function heat(indoor_controler) {
       outdoor_humidity: outdoor.humidity,
       outdoor_hi: outdoor.heatindex,
       outdoor_last_check: last_weather_check.toLocaleString(),
+      clim_temperature_interior: clim.temperature_interior,
+      clim_humidity_interior: clim.humidity_interior,
+      clim_temperature_exterior: clim.temperature_exterior,
+      clim_last_check: last_clim_check.toLocaleString(),
       date: date_now.getTime()
     } );
   })
@@ -408,6 +441,10 @@ function heat(indoor_controler) {
       outdoor_humidity: err,
       outdoor_hi: err,
       outdoor_last_check: last_weather_check.toLocaleString(),
+      clim_temperature_interior: clim.temperature_interior,
+      clim_humidity_interior: clim.humidity_interior,
+      clim_temperature_exterior: clim.temperature_exterior,
+      clim_last_check: last_clim_check.toLocaleString(),
       date: date_now.getTime()
     } );
   });
@@ -424,7 +461,10 @@ function heating2string(heating){
     heating.indoor_controler_temperature + ", " +
     heating.outdoor_temperature + ", " +
     heating.outdoor_humidity + ", " +
-    heating.outdoor_hi
+    heating.outdoor_hi + ", " +
+    heating.clim_temperature_interior + ", " +
+    heating.clim_humidity_interior + ", " +
+    heating.clim_temperature_exterior
   );
 }
 
@@ -468,6 +508,9 @@ app.get('/thermostat', function(req, res) {
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
+        climtempint: heating.clim_temperature_interior,
+        climhumint: heating.clim_humidity_interior,
+        climtempexp: heating.clim_temperature_exterior,t:
         dateext: heating.outdoor_last_check
       }
     );
@@ -491,6 +534,9 @@ app.get('/thermostat', function(req, res) {
         tempext: heating.outdoor_temperature,
         humiext: heating.outdoor_humidity,
         hiext: heating.outdoor_hi,
+        climtempint: heating.clim_temperature_interior,
+        climhumint: heating.clim_humidity_interior,
+        climtempexp: heating.clim_temperature_exterior,
         dateext: heating.outdoor_last_check
       }
     );
