@@ -61,7 +61,7 @@ function get_curr_log_file(last_check){
       '_logs.csv';
 }
 function create_log_writeStream(file_name){
-  return fs.createWriteStream(file_name, {
+  return Fs.createWriteStream(file_name, {
   flags: "a",
   encoding: "utf8",
   mode: 0o666,
