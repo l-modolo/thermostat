@@ -50,6 +50,28 @@ var last_calendar_check = new Date();
 var last_weather_check = new Date();
 var last_clim_check = new Date();
 
+function get_curr_log_file(last_check){
+  return __dirname +
+      '/readings/' +
+      last_check.getFullYear() +
+      '_' +
+      last_check.getMonth() +
+      '_' +
+      last_check.getDate() +
+      '_logs.csv';
+}
+function create_log_writeStream(file_name){
+  return fs.createWriteStream(file_name, {
+  flags: "a",
+  encoding: "utf8",
+  mode: 0o666,
+  autoClose: false,
+  emitClose: true,
+  start: 0
+});
+}
+var log_file = get_curr_log_file(last_controler_check);
+var log_writeStream = create_log_writeStream(log_file);
 
 function heatindex(temperature, humidity) {
   var T = temperature * 1.8000 + 32.0;
@@ -267,6 +289,23 @@ function read_ics(file) {
       }
       fulfill(data);
     });
+  });
+}
+
+function write_log(body) {
+  return new Promise( function(fulfill, reject) {
+    var curr_log_file = get_curr_log_file(last_controler_check);
+    if (log_file != curr_log_file){
+      log_file = curr_log_file;
+      log_writeStream.end();
+      log_writeStream = create_log_writeStream(log_file);
+    }
+    if (!log_writeStream.write(body + "\n")) {
+      log_writeStream.once('drain', function(){
+        log_writeStream = create_log_writeStream(log_file);
+      });
+    }
+    fulfill("log writen");
   });
 }
 
@@ -528,6 +567,7 @@ app.get('/thermostat', function(req, res) {
       }
     );
     console.log(heating2string(heating));
+    write_log(heating2string(heating));
   }).catch( function(heating) {
     var heatingstatus = "off";
     if (heating.heat == 1) {
@@ -555,6 +595,7 @@ app.get('/thermostat', function(req, res) {
       }
     );
     console.log(heating2string(heating));
+    write_log(heating2string(heating));
   });
 });
 
