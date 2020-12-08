@@ -1,5 +1,4 @@
 const Express = require('express');
-const Request = require('request-promise');
 const Bluebird = require('bluebird');
 const fetch = require('node-fetch');
 fetch.Promise = Bluebird;
@@ -227,7 +226,8 @@ function parse_ics(body) {
 
 function write_temp() {
   return new  Promise(function (fulfill, reject){
-    Request(agenda_url)
+    fetch(agenda_url)
+    .then(res => res.text())
     .then(function (body) {
       var ics_file = Fs.createWriteStream(__dirname + '/readings/thermostat.ics');
       ics_file.on('open', function(fd) {
@@ -271,7 +271,8 @@ function read_ics(file) {
 }
 
 function get_calendar(){
-  return Request(agenda_url)
+  return fetch(agenda_url)
+   .then(res => res.text())
   .then( function(body) {
     return Bluebird.all([
       parse_ics(body),
@@ -298,7 +299,8 @@ function get_calendar(){
 ///////////////////////////// get temperature sensor ///////////////////////////
 
 function get_thermometer() {
-  return( Request(thermometer_url + "both")
+  return( fetch(thermometer_url + "both")
+    .then(res => res.text())
     .then(function (body) {
       var res = JSON.parse(body);
       thermometer_back = {
@@ -320,7 +322,8 @@ function get_thermometer() {
 ///////////////////////////// get controler sensor /////////////////////////////
 
 function get_controler() {
-  return( Request(controler_url)
+  return( fetch(controler_url)
+    .then(res => res.text())
     .then(function (body) {
       var res = JSON.parse(body);
       controler_back = parseFloat(res.internal);
@@ -365,7 +368,8 @@ function get_clim() {
 //////////////////////////// get weather temperature ///////////////////////////
 
 function get_weather() {
-  return( Request(weather_url)
+  return( fetch(weather_url)
+    .then(res => res.text())
     .then(function (body) {
       var res = JSON.parse(body).list[0].main;
       weather_back = {
