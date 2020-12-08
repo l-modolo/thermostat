@@ -339,8 +339,8 @@ function get_controler() {
 
 function get_clim() {
   return( fetch(clim_url)
+    .then(res => res.text())
     .then(function (body) {
-      body = body.text();
       body = body.replace(/=([^,]+),/g, ':$1, ');
       body = body.replace(/([a-zA-Z]+)/g, '"$1"');
       body = "{" + body + "}";
