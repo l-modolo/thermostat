@@ -1,6 +1,8 @@
 const Express = require('express');
 const Request = require('request-promise');
 const Bluebird = require('bluebird');
+const fetch = require('node-fetch');
+fetch.Promise = Bluebird;
 const Fs = require('fs');
 
 function read_config() {
@@ -336,8 +338,9 @@ function get_controler() {
 //////////////////////////// get weather temperature ///////////////////////////
 
 function get_clim() {
-  return( Request(clim_url)
+  return( fetch(clim_url)
     .then(function (body) {
+      body = body.text();
       body = body.replace(/=([^,]+),/g, ':$1, ');
       body = body.replace(/([a-zA-Z]+)/g, '"$1"');
       body = "{" + body + "}";
