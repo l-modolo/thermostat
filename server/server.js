@@ -342,6 +342,7 @@ function get_clim() {
     .then(res => res.text())
     .then(function (body) {
       body = body.replace(/=([^,]+),/g, ':$1, ');
+      body = body.replace(/=/g, ':');
       body = body.replace(/([a-zA-Z]+)/g, '"$1"');
       body = "{" + body + "}";
       var res = JSON.parse(body).list[0].main;
