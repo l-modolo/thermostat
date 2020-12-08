@@ -345,10 +345,10 @@ function get_clim() {
       body = body.replace(/=/g, ':');
       body = body.replace(/([a-zA-Z]+)/g, '"$1"');
       body = "{" + body + "}";
-      var res = JSON.parse(body).list[0].main;
+      var res = JSON.parse(body);
       clim_back = {
         temperature_interior: parseFloat(res.htemp),
-        humidiy_interior: parseFloat(res.hhum),
+        humidity_interior: parseFloat(res.hhum),
         temperature_exterior: parseFloat(res.otemp)
       };
       last_clim_check = new Date();
