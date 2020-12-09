@@ -569,6 +569,7 @@ app.get('/thermostat', function(req, res) {
       }
     );
     console.log(heating2string(heating));
+    write_log(heating2string(heating));
   }).catch( function(heating) {
     var heatingstatus = "off";
     if (heating.heat == 1) {
@@ -596,6 +597,7 @@ app.get('/thermostat', function(req, res) {
       }
     );
     console.log(heating2string(heating));
+    write_log(heating2string(heating));
   });
 });
 
