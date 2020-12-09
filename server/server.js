@@ -295,7 +295,7 @@ function read_ics(file) {
 function write_log(body) {
   return new Promise( function(fulfill, reject) {
     var curr_log_file = get_curr_log_file(last_controler_check);
-    if (!log_file.toString().equals(curr_log_file.toString())){
+    if (log_file != curr_log_file){
       log_file = curr_log_file;
       log_writeStream.end();
       log_writeStream = create_log_writeStream(log_file);
