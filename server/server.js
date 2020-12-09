@@ -531,10 +531,12 @@ app.get('/', function(req, res) {
 	    res.send("off");
     }
     console.log(heating2string(heating));
+    write_log(heating2string(heating));
   })
   .catch( function(heating) {
     res.send("off");
     console.log(heating2string(heating));
+    write_log(heating2string(heating));
   });
 });
 
