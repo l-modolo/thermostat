@@ -300,11 +300,20 @@ function write_log(body) {
       log_writeStream.end();
       log_writeStream = create_log_writeStream(log_file);
     }
+    log_writeStream.on('end', function () {
+      log_file = get_curr_log_file(last_controler_check);
+      log_writeStream = create_log_writeStream(log_file);
+    });
     if (!log_writeStream.write(body + "\n")) {
       log_writeStream.once('drain', function(){
+        log_file = get_curr_log_file(last_controler_check);
         log_writeStream = create_log_writeStream(log_file);
       });
     }
+    log_writeStream.on('error', function () {
+      log_file = get_curr_log_file(last_controler_check);
+      log_writeStream = create_log_writeStream(log_file);
+    });
     fulfill("log writen");
   });
 }
