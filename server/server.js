@@ -70,7 +70,7 @@ function create_log_writeStream(file_name){
   start: 0
 });
 }
-var log_file = get_curr_log_file(last_controler_check);
+var log_file = get_curr_log_file(last_thermometer_check);
 var log_writeStream = create_log_writeStream(log_file);
 
 function heatindex(temperature, humidity) {
@@ -294,24 +294,24 @@ function read_ics(file) {
 
 function write_log(body) {
   return new Promise( function(fulfill, reject) {
-    var curr_log_file = get_curr_log_file(last_controler_check);
+    var curr_log_file = get_curr_log_file(last_thermometer_check);
     if (log_file != curr_log_file){
       log_file = curr_log_file;
       log_writeStream.end();
       log_writeStream = create_log_writeStream(log_file);
     }
     log_writeStream.on('end', function () {
-      log_file = get_curr_log_file(last_controler_check);
+      log_file = get_curr_log_file(last_thermometer_check);
       log_writeStream = create_log_writeStream(log_file);
     });
     if (!log_writeStream.write(body + "\n")) {
       log_writeStream.once('drain', function(){
-        log_file = get_curr_log_file(last_controler_check);
+        log_file = get_curr_log_file(last_thermometer_check);
         log_writeStream = create_log_writeStream(log_file);
       });
     }
     log_writeStream.on('error', function () {
-      log_file = get_curr_log_file(last_controler_check);
+      log_file = get_curr_log_file(last_thermometer_check);
       log_writeStream = create_log_writeStream(log_file);
     });
     fulfill("log writen");
