@@ -11,6 +11,7 @@ SimpleDHT22 dht22;
 
 int i = 0;
 String line;
+int heat_status = -1;
 unsigned long current_time;
 float heating = 0;
 float temperature = 0.0;
@@ -44,6 +45,8 @@ void setup(void){
 
   controler_server.begin();
   Serial.println("HTTP server started");
+  relayOff();
+  heat_status = -1;
 }
 
 void loop(void){
@@ -85,6 +88,7 @@ void getinfos (){
     if (client.connect(server, 80)) {
       readserver();
     } else {
+      heat_status = -1;
       Serial.println("Connection to server failed");
       // connect to thermometer
       if (client.connect(thermometer, 80)) {
@@ -184,15 +188,19 @@ void readserver(){
 
 void relayOn() {
   Serial.println("relay on");
+  heat_status = 1;
   digitalWrite(resetPin, LOW);
 }
 
 void relayOff() {
   Serial.println("relay off");
+  heat_status = 0;
   digitalWrite(resetPin, HIGH);
 }
 
 String update_status() {
   return("{\"internal\": " +
-    readinternaltempString() + "}");
+    readinternaltempString() + 
+    ", \"relay\":" + 
+    String((int) heat_status) + "}");
 }
