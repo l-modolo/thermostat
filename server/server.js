@@ -445,8 +445,7 @@ function heat(indoor_controler) {
     get_calendar(),
     get_thermometer(),
     get_weather(),
-    get_clim(),
-    get_controler()
+    get_clim()
   ])
   .then( function ( temperatures ) {
     calendar_temp = temperatures[0];
