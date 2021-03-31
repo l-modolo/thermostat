@@ -217,7 +217,7 @@ function parse_ics(body) {
 	var date_now = new Date();
 	var temp_found = default_temp();
 	var lines = body.split('\n');
-	var tzone = "2";
+	var tzone = "0";
 	date_now.setHours(date_now.getHours()+parseInt(tzone));
 	var i = 0;
 	var j = -1;
